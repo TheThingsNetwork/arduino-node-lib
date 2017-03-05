@@ -23,8 +23,6 @@ THE SOFTWARE.
 
 #include "PinChangeInterrupt.h"
 
-#ifdef ARDUINO_ARCH_AVR
-
 //================================================================================
 // Interrupt Handler
 //================================================================================
@@ -158,5 +156,3 @@ void PinChangeInterruptEventPCINT7(void)
 #endif // PCINT_USE_PORT0
 
 #endif // PCINT_INCLUDE_FROM_CPP
-
-#endif

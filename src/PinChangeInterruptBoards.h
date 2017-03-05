@@ -24,8 +24,6 @@ THE SOFTWARE.
 // include guard
 #pragma once
 
-#ifdef ARDUINO_ARCH_AVR
-
 //================================================================================
 // Board Definitions
 //================================================================================
@@ -143,6 +141,4 @@ THE SOFTWARE.
 #define PCINT_INPUT_PORT3 0
 #else
 #define PCINT_INPUT_PORT3_USED
-#endif
-
 #endif

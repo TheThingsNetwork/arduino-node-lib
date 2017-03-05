@@ -29,8 +29,6 @@ THE SOFTWARE.
 
 #include "Arduino.h"
 
-#ifdef ARDUINO_ARCH_AVR
-
 //================================================================================
 // General Helper Definitions and Mappings
 //================================================================================
@@ -918,5 +916,3 @@ uint8_t getPinChangeInterruptTrigger(const uint8_t pcintNum)
     else
 	return FALLING;
 }
-
-#endif

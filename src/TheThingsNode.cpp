@@ -1,8 +1,6 @@
 // Copyright © 2017 The Things Network
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifdef ARDUINO_ARCH_AVR
-
 #include <Arduino.h>
 #include <TheThingsNode.h>
 
@@ -871,5 +869,3 @@ void TheThingsNode::deepSleep(void)
   USBCON &= ~_BV(FRZCLK);
   ADCSRA |= (1 << ADEN);
 }
-
-#endif

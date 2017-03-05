@@ -4,8 +4,6 @@
 #ifndef _THETHINGSNODE_H_
 #define _THETHINGSNODE_H_
 
-#ifdef ARDUINO_ARCH_AVR
-
 #include <Arduino.h>
 #include <PinChangeInterrupt.h>
 #include <PinChangeInterruptBoards.h>
@@ -129,5 +127,4 @@ public:
   uint16_t getBattery();
 };
 
-#endif
 #endif

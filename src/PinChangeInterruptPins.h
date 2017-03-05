@@ -24,8 +24,6 @@ THE SOFTWARE.
 // include guard
 #pragma once
 
-#ifdef ARDUINO_ARCH_AVR
-
 /*
 The strategy in this file:
 
@@ -743,5 +741,3 @@ PCINT_USE_PORT0 + \
 PCINT_USE_PORT1 + \
 PCINT_USE_PORT2 + \
 PCINT_USE_PORT3)
-
-#endif

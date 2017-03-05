@@ -23,8 +23,6 @@ THE SOFTWARE.
 
 #include "PinChangeInterrupt.h"
 
-#ifdef ARDUINO_ARCH_AVR
-
 // manually include cpp files here to save flash if only 1 ISR is present
 // or if the user knows he just wants to compile all enabled ports.
 #if defined(PCINT_ALINKAGE) && defined(PCINT_COMPILE_ENABLED_ISR)
@@ -337,5 +335,3 @@ pop r1
 reti
 }
 */
-
-#endif

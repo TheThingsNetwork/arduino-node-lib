@@ -24,8 +24,6 @@ THE SOFTWARE.
 // include guard
 #pragma once
 
-#ifdef ARDUINO_ARCH_AVR
-
 //================================================================================
 // General Settings
 //================================================================================
@@ -254,6 +252,4 @@ The order is also okay. */
 #if defined(PCINT_ENABLE_PORT1)
 #undef PCINT_ENABLE_PORT1
 #endif
-#endif
-
 #endif
