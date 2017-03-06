@@ -189,6 +189,7 @@ Serial.println();
 #endif
 #endif
 
+
 //================================================================================
 // Hardware Definitions
 //================================================================================
@@ -215,7 +216,7 @@ Serial.println();
 #endif
 
 // number of available ports
-#define PCINT_NUM_PORTS (\
+#define PCINT_NUM_PORTS ( \
 PCINT_HAS_PORT0 + \
 PCINT_HAS_PORT1 + \
 PCINT_HAS_PORT2 + \
@@ -396,6 +397,7 @@ Serial.println("#endif");
 #define PCINT_HAS_PCINT31 false
 #endif
 
+
 // count numbers of available pins on each port
 /*
 for (int port = 0; port < 4; port++) {
@@ -412,7 +414,7 @@ Serial.println(")");
 Serial.println();
 }
 */
-#define PCINT_NUM_PINS_PORT0 (\
+#define PCINT_NUM_PINS_PORT0 ( \
 PCINT_HAS_PCINT0 + \
 PCINT_HAS_PCINT1 + \
 PCINT_HAS_PCINT2 + \
@@ -422,7 +424,7 @@ PCINT_HAS_PCINT5 + \
 PCINT_HAS_PCINT6 + \
 PCINT_HAS_PCINT7)
 
-#define PCINT_NUM_PINS_PORT1 (\
+#define PCINT_NUM_PINS_PORT1 ( \
 PCINT_HAS_PCINT8 + \
 PCINT_HAS_PCINT9 + \
 PCINT_HAS_PCINT10 + \
@@ -432,7 +434,7 @@ PCINT_HAS_PCINT13 + \
 PCINT_HAS_PCINT14 + \
 PCINT_HAS_PCINT15)
 
-#define PCINT_NUM_PINS_PORT2 (\
+#define PCINT_NUM_PINS_PORT2 ( \
 PCINT_HAS_PCINT16 + \
 PCINT_HAS_PCINT17 + \
 PCINT_HAS_PCINT18 + \
@@ -442,7 +444,7 @@ PCINT_HAS_PCINT21 + \
 PCINT_HAS_PCINT22 + \
 PCINT_HAS_PCINT23)
 
-#define PCINT_NUM_PINS_PORT3 (\
+#define PCINT_NUM_PINS_PORT3 ( \
 PCINT_HAS_PCINT24 + \
 PCINT_HAS_PCINT25 + \
 PCINT_HAS_PCINT26 + \
@@ -452,12 +454,14 @@ PCINT_HAS_PCINT29 + \
 PCINT_HAS_PCINT30 + \
 PCINT_HAS_PCINT31)
 
+
 // number of available hardware pins
-#define EXTERNAL_NUM_PINCHANGEINTERRUPT (\
+#define EXTERNAL_NUM_PINCHANGEINTERRUPT ( \
 PCINT_NUM_PINS_PORT0 + \
 PCINT_NUM_PINS_PORT1 + \
 PCINT_NUM_PINS_PORT2 + \
 PCINT_NUM_PINS_PORT3)
+
 
 //================================================================================
 // Used Pins
@@ -642,6 +646,7 @@ Serial.println("#endif");
 #define PCINT_USE_PCINT31 false
 #endif
 
+
 //================================================================================
 // Number Used Pins
 //================================================================================
@@ -662,7 +667,7 @@ Serial.println(")");
 Serial.println();
 }
 */
-#define PCINT_NUM_USED_PINS_PORT0 (\
+#define PCINT_NUM_USED_PINS_PORT0 ( \
 PCINT_USE_PCINT0 + \
 PCINT_USE_PCINT1 + \
 PCINT_USE_PCINT2 + \
@@ -672,7 +677,7 @@ PCINT_USE_PCINT5 + \
 PCINT_USE_PCINT6 + \
 PCINT_USE_PCINT7)
 
-#define PCINT_NUM_USED_PINS_PORT1 (\
+#define PCINT_NUM_USED_PINS_PORT1 ( \
 PCINT_USE_PCINT8 + \
 PCINT_USE_PCINT9 + \
 PCINT_USE_PCINT10 + \
@@ -682,7 +687,7 @@ PCINT_USE_PCINT13 + \
 PCINT_USE_PCINT14 + \
 PCINT_USE_PCINT15)
 
-#define PCINT_NUM_USED_PINS_PORT2 (\
+#define PCINT_NUM_USED_PINS_PORT2 ( \
 PCINT_USE_PCINT16 + \
 PCINT_USE_PCINT17 + \
 PCINT_USE_PCINT18 + \
@@ -692,7 +697,7 @@ PCINT_USE_PCINT21 + \
 PCINT_USE_PCINT22 + \
 PCINT_USE_PCINT23)
 
-#define PCINT_NUM_USED_PINS_PORT3 (\
+#define PCINT_NUM_USED_PINS_PORT3 ( \
 PCINT_USE_PCINT24 + \
 PCINT_USE_PCINT25 + \
 PCINT_USE_PCINT26 + \
@@ -702,8 +707,9 @@ PCINT_USE_PCINT29 + \
 PCINT_USE_PCINT30 + \
 PCINT_USE_PCINT31)
 
+
 // number of used hardware pins
-#define EXTERNAL_NUM_USED_PINCHANGEINTERRUPT (\
+#define EXTERNAL_NUM_USED_PINCHANGEINTERRUPT ( \
 PCINT_NUM_USED_PINS_PORT0 + \
 PCINT_NUM_USED_PINS_PORT1 + \
 PCINT_NUM_USED_PINS_PORT2 + \
@@ -736,7 +742,7 @@ PCINT_NUM_USED_PINS_PORT3)
 #endif
 
 // number of used ports
-#define PCINT_NUM_USED_PORTS (\
+#define PCINT_NUM_USED_PORTS ( \
 PCINT_USE_PORT0 + \
 PCINT_USE_PORT1 + \
 PCINT_USE_PORT2 + \
