@@ -816,6 +816,16 @@ uint8_t TheThingsNode::readMotion(unsigned char REG_ADDRESS)
   return resp;
 }
 
+void TheThingsNode::getAcceleration(float *x, float *y, float *z)
+{
+  *x = ((short)(readMotion(1)<<8 | readMotion(2))) >> 4;
+  *y = ((short)(readMotion(3)<<8 | readMotion(4))) >> 4;
+  *z = ((short)(readMotion(5)<<8 | readMotion(6))) >> 4;
+  *x = (float)*x / (float)(1<<11) * (float)(2);
+  *y = (float)*y / (float)(1<<11) * (float)(2);
+  *z = (float)*z / (float)(1<<11) * (float)(2);
+}
+
 void TheThingsNode::WDT_start()
 {
   if (this->wdtStarted)

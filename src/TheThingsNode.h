@@ -104,6 +104,7 @@ public:
   void onMotionStop(void (*callback)(unsigned long duration));
   bool isMoving();
   void configMotion(bool enabled);
+  void getAcceleration(float *x, float *y, float *z);
 
   void onButtonPress(void (*callback)(void));
   void onButtonRelease(void (*callback)(unsigned long duration));
