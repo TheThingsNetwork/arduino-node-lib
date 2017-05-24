@@ -818,9 +818,17 @@ uint8_t TheThingsNode::readMotion(unsigned char REG_ADDRESS)
 
 void TheThingsNode::getAcceleration(float *x, float *y, float *z)
 {
+  // Resource: https://github.com/sparkfun/MMA8452_Accelerometer/blob/master/Libraries/Arduino/src/SparkFun_MMA8452Q.cpp
+  // Read the acceleration from registers 1 through 6 of the MMA8452 accelerometer.
+  // 2 registers per axis, 12 bits per axis.
+  // Bit-shifting right does sign extension to preserve negative numbers.
   *x = ((short)(readMotion(1)<<8 | readMotion(2))) >> 4;
   *y = ((short)(readMotion(3)<<8 | readMotion(4))) >> 4;
   *z = ((short)(readMotion(5)<<8 | readMotion(6))) >> 4;
+
+  // Scale 12 bit signed values to units of g. The default measurement range is ±2g.
+  // That is 11 bits for positive values and 11 bits for negative values.
+  // value = (value / (2^11)) * 2
   *x = (float)*x / (float)(1<<11) * (float)(2);
   *y = (float)*y / (float)(1<<11) * (float)(2);
   *z = (float)*z / (float)(1<<11) * (float)(2);
