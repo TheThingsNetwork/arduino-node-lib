@@ -33,6 +33,7 @@ void setup()
   node = TheThingsNode::setup();
   node->configLight(true);
   node->configInterval(true, 60000);
+  node->configTemperature(true);
   node->onWake(wake);
   node->onInterval(interval);
   node->onSleep(sleep);
