@@ -111,7 +111,7 @@ void sendData(uint8_t port)
   node->getAcceleration(&x, &y, &z);
   lpp.addAccelerometer(7, x, y, z);
   
-  ttn.sendBytes(lpp.getBuffer(), lpp.getSize());
+  ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 }
 
 void printSensors()
