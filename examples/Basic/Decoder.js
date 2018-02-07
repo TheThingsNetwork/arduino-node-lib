@@ -24,7 +24,10 @@ function Decoder(bytes, port) {
   decoded.event = events[port];
   decoded.battery = (bytes[0] << 8) + bytes[1];
   decoded.light = (bytes[2] << 8) + bytes[3];
-  decoded.temperature = ((bytes[4] << 8) + bytes[5]) / 100;
+  if (bytes[4] & 0x80)
+    decoded.temperature = ((0xffff << 16) + (bytes[4] << 8) + bytes[5]) / 100;
+  else
+    decoded.temperature = ((bytes[4] << 8) + bytes[5]) / 100;
 
   return decoded;
 }
