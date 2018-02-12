@@ -11,6 +11,7 @@
 #define TTN_GREEN_LED 5
 #define TTN_BLUE_LED 6
 #define TTN_BUTTON 16
+#define TTN_LORA_RESET 21
 #define TTN_VBAT_MEAS_EN A2
 #define TTN_VBAT_MEAS 1
 #define TTN_TEMPERATURE_SENSOR_ADDRESS 0x18
@@ -41,12 +42,12 @@
 
 Hackscribble_MCP9804 TTN_TEMPERATURE_SENSOR(TTN_TEMPERATURE_SENSOR_ADDRESS);
 
-bool TTN_TEMPERATURE = false;
-bool TTN_MOTION_START = false;
-bool TTN_MOTION_STOP = false;
-bool TTN_BUTTON_PRESS = false;
-bool TTN_BUTTON_RELEASE = false;
-uint32_t TTN_INTERVAL = 0;
+volatile bool TTN_TEMPERATURE = false;
+volatile bool TTN_MOTION_START = false;
+volatile bool TTN_MOTION_STOP = false;
+volatile bool TTN_BUTTON_PRESS = false;
+volatile bool TTN_BUTTON_RELEASE = false;
+volatile uint32_t TTN_INTERVAL = 0;
 
 void TTN_TEMPERATURE_FN()
 {
@@ -74,7 +75,9 @@ void TTN_BUTTON_FN()
   {
     TTN_BUTTON_PRESS = true;
   }
-  else if (trigger == RISING)
+
+  // Be sure main loop ACK press button before rising the release 
+  if (TTN_BUTTON_PRESS == false && trigger == RISING ) 
   {
     TTN_BUTTON_RELEASE = true;
   }
@@ -217,8 +220,16 @@ void TheThingsNode::loop()
   }
   else
   {
-    Serial.flush();
-    deepSleep();
+    // Don't go to sleep mode while button is still pressed
+    // because if so, timer of ms will be stopped and duration
+    // of pressed button will not work
+    if (this->buttonPressed) {
+      delay(100);
+      TTN_INTERVAL = TTN_INTERVAL + 100;
+    } else {
+      Serial.flush();
+      deepSleep();
+    }
   }
 }
 
@@ -736,6 +747,15 @@ TheThingsNode::TheThingsNode()
   pinMode(TTN_GREEN_LED, OUTPUT);
   pinMode(TTN_BLUE_LED, OUTPUT);
   setColor(TTN_BLACK);
+
+  // hardware reset of LoRa module, so module is reset on sketch upload 
+  #ifdef TTN_LORA_RESET
+  pinMode(TTN_LORA_RESET, OUTPUT);
+  digitalWrite(TTN_LORA_RESET, LOW);
+  delay(100);
+  digitalWrite(TTN_LORA_RESET, HIGH);
+  #endif
+
 
   // TODO: Can we enable/disable this at will to save memory?
   USBCON |= (1 << OTGPADE);
