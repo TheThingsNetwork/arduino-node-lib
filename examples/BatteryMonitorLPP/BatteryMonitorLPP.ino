@@ -41,7 +41,7 @@ CayenneLPP lpp(16);
 #define PORT_BUTTON 4
 
 // Interval between send in seconds, so 300s = 5min
-#define CONFIG_INTERVAL 300
+#define CONFIG_INTERVAL ((uint32_t) 300)
 
 void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
@@ -122,7 +122,7 @@ void sendData(uint8_t port, uint32_t value)
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 
   // Set RN2483 to sleep mode
-  ttn.sleep( (uint32_t) (CONFIG_INTERVAL*1000) );
+  ttn.sleep( CONFIG_INTERVAL*1000 );
 
   // This one is not optionnal, remove it
   // and say bye bye to RN2983 sleep mode
