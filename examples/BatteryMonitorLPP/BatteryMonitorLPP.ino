@@ -1,23 +1,3 @@
-// **********************************************************************************
-// Ultra Low Power BatteryMonitorLPP for TheThingsNode device
-// **********************************************************************************
-//
-// This program just send lora packet containing Battery info to myDevices portal
-// if button is pressed the batterey packet is send and the push button duration
-// is also added 
-//
-// This example also take into account of setting Lora Module to sleep mode this 
-// allow to reduce consumption in sleep mode from 3.2mA to 280µA
-//
-// Written by Charles-Henri Hallard (CH2i) 
-//
-// History : V1.00 2018-02-11 - First release based on TTN CayenneLPP example code
-//           V1.01 2018-02-12 - Added Hard reset of Lora module at startup
-//                            - Fixed issue https://github.com/TheThingsNetwork/arduino-node-lib/issues/9
-//                            - Enable Low Power of Lora Module
-//
-// **********************************************************************************
-
 #include <TheThingsNode.h>
 #include <CayenneLPP.h>
 
@@ -113,10 +93,10 @@ void sendData(uint8_t port, uint32_t value)
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
   if (port == PORT_BUTTON) {
-	  debugSerial.print(F("Button:\t"));
-	  debugSerial.print(value);
-	  debugSerial.println(F("ms"));
-	  lpp.addAnalogInput(7, value/1000.0);
+    debugSerial.print(F("Button:\t"));
+    debugSerial.print(value);
+    debugSerial.println(F("ms"));
+    lpp.addAnalogInput(7, value/1000.0);
   }
 
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);

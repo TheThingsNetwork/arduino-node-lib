@@ -73,7 +73,6 @@ void TTN_BUTTON_FN()
   uint8_t trigger = getPinChangeInterruptTrigger(digitalPinToPCINT(TTN_BUTTON));
   if (trigger == FALLING)
   {
-    //Serial.println(F("IPRESS"));
     TTN_BUTTON_PRESS = true;
   }
 
@@ -224,7 +223,7 @@ void TheThingsNode::loop()
     // Don't go to sleep mode while button is still pressed
     // because if so, timer of ms will be stopped and duration
     // of pressed button will not work
-    if ( this->buttonPressed ) {
+    if (this->buttonPressed) {
       delay(100);
       TTN_INTERVAL = TTN_INTERVAL + 100;
     } else {
@@ -749,7 +748,7 @@ TheThingsNode::TheThingsNode()
   pinMode(TTN_BLUE_LED, OUTPUT);
   setColor(TTN_BLACK);
 
-  // set pin mode every time to avoid constraining the user about when the pin is initialized
+  // hardware reset of LoRa module, so module is reset on sketch upload 
   #ifdef TTN_LORA_RESET
   pinMode(TTN_LORA_RESET, OUTPUT);
   digitalWrite(TTN_LORA_RESET, LOW);

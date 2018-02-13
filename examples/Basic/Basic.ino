@@ -145,7 +145,7 @@ void sendData(uint8_t port)
   ttn.sendBytes(payload, sizeof(payload), port);
 
   // Set RN2483 to sleep mode
-  ttn.sleep( 60000 );
+  ttn.sleep(60000);
 
   // This one is not optionnal, remove it
   // and say bye bye to RN2983 sleep mode
