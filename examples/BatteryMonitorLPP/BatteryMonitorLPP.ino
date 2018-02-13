@@ -1,4 +1,5 @@
 #include <TheThingsNode.h>
+#include <TheThingsNetwork.h>
 #include <CayenneLPP.h>
 
 // Set your AppEUI and AppKey
