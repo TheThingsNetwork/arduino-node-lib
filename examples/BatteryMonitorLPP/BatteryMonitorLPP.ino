@@ -24,7 +24,7 @@ CayenneLPP lpp(16);
 // Interval between send in seconds, so 300s = 5min
 #define CONFIG_INTERVAL ((uint32_t) 300)
 
-void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
+void sendData(uint8_t port = PORT_SETUP, uint32_t duration = 0);
 
 // This is called on each interval we defined so mainly
 // this is where we need to do our job
@@ -97,13 +97,13 @@ void sendData(uint8_t port, uint32_t value)
     debugSerial.print(F("Button:\t"));
     debugSerial.print(value);
     debugSerial.println(F("ms"));
-    lpp.addAnalogInput(7, value/1000.0);
+    lpp.addAnalogInput(7, value / 1000.0);
   }
 
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 
   // Set RN2483 to sleep mode
-  ttn.sleep( CONFIG_INTERVAL*1000 );
+  ttn.sleep(CONFIG_INTERVAL * 1000);
 
   // This one is not optionnal, remove it
   // and say bye bye to RN2983 sleep mode
