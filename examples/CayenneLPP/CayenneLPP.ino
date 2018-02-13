@@ -97,6 +97,10 @@ void onButtonRelease(unsigned long duration)
 
 void sendData(uint8_t port)
 {
+
+  // Wake RN2483
+  ttn.wake();
+
   printSensors();
 
   lpp.reset();
@@ -112,6 +116,9 @@ void sendData(uint8_t port)
   lpp.addAccelerometer(7, x, y, z);
   
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
+
+  // Set RN module to sleep mode
+  ttn.sleep(60000);
 }
 
 void printSensors()
