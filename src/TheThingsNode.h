@@ -87,7 +87,7 @@ private:
   TheThingsNode(TheThingsNode const &);
   void operator=(TheThingsNode const &);
 
-  TheThingsNetwork *ttn;
+  TheThingsNetwork *pttn;
 
   bool intervalEnabled;
   uint32_t intervalMs;

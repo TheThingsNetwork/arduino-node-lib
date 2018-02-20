@@ -48,12 +48,9 @@ void TTN_BUTTON_FN()
 
 void TTN_SERIAL_LORA_FN()
 {
-  if ( digitalRead(0) == 0 ) {
-    wakeStatus |= TTN_WAKE_LORA;
-  }
-  // Just used to wake up we can now
-  // mask this interrupt because serial 
-  // will become verbose
+  // Just used to wake up we can now mask this
+  // interrupt because serial will become verbose
+  wakeStatus |= TTN_WAKE_LORA;
   EIMSK &= ~(1 << INT2);
 }
 
@@ -192,7 +189,7 @@ void TheThingsNode::loop()
 
   if (wakeStatus & TTN_WAKE_LORA)
   {
-    if (this->intervalEnabled && this->intervalCallback)
+    if (this->pttn && this->intervalCallback)
     {
       this->intervalCallback();
     }
@@ -298,13 +295,13 @@ void TheThingsNode::configInterval(bool enabled, uint32_t ms)
 void TheThingsNode::configInterval(TheThingsNetwork *ttn, uint32_t ms)
 {
   this->intervalMs = ms;
-  this->ttn = ttn;
+  this->pttn = ttn;
   this->intervalEnabled = true;
 }
 
 void TheThingsNode::configInterval(bool enabled)
 {
-  this->ttn = NULL;
+  this->pttn = NULL;
   this->intervalEnabled = enabled;
 }
 
@@ -912,13 +909,13 @@ void TheThingsNode::WDT_stop()
 void TheThingsNode::deepSleep(void)
 {
   // We want to be awake by LoRa module ?
-  if (this->ttn) {
+  if (this->pttn) {
     // watchdog Not needed, avoid wake every 8S
     WDT_stop(); 
 
   // Set LoRa module sleep mode
   //  ttn.sleep( CONFIG_INTERVAL*1000 );
-    this->ttn->sleep(this->intervalMs);
+    this->pttn->sleep(this->intervalMs);
     // This one is not optionnal, remove it
     // and say bye bye to RN2483 or RN2903 sleep mode
     delay(50);
