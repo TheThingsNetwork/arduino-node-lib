@@ -141,7 +141,7 @@ public:
   void onInterval(void (*callback)(void));
   void configInterval(bool enabled, uint32_t ms);
   void configInterval(bool enabled);
-  void configInterval(TheThingsNetwork *ttn, uint32_t ms);
+  void configInterval(TheThingsNetwork *pttn, uint32_t ms);
 
   void configLight(bool enabled, uint8_t gain);
   void configLight(bool enabled);
