@@ -12,17 +12,17 @@ const char *appKey = "00000000000000000000000000000000";
 #define loraSerial Serial1
 #define debugSerial Serial
 
-TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
-TheThingsNode *node;
-CayenneLPP lpp(16);
-
 #define PORT_SETUP 1
 #define PORT_INTERVAL 2
 #define PORT_MOTION 3
 #define PORT_BUTTON 4
 
+TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
+TheThingsNode *node;
+CayenneLPP lpp(16);
+
 // Interval between send in seconds, so 300s = 5min
-#define CONFIG_INTERVAL ((uint32_t) 300)
+#define CONFIG_INTERVAL ((uint32_t)300)
 
 void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
@@ -38,15 +38,63 @@ void interval()
 // This is called on each wake, every 8S or by an sensor/button interrupt
 // if it's watchdog, we mainly do nothing (core IRQ, we don't have choice)
 // but if it's an interupt it will ne bone ine loop
-void wake()
+void wake(uint8_t wakeReason)
 {
-  debugSerial.println(F("-- WAKE"));
+  debugSerial.print(F("-- WAKE 0x"));
+  debugSerial.print(wakeReason, HEX);
+  uint8_t ledcolor = TTN_BLACK;
+  uint8_t ledblink = 0 ;
+
+  if (wakeReason&(TTN_WAKE_WATCHDOG|TTN_WAKE_INTERVAL)) {
+    ledcolor = TTN_YELLOW;
+    ledblink = 1;
+    if (wakeReason&TTN_WAKE_WATCHDOG) {
+      debugSerial.print(F(" Watchdog"));
+    }
+    if (wakeReason&TTN_WAKE_INTERVAL) {
+      debugSerial.print(F(" INTERVAL"));
+      ledblink++;
+    }
+  }
+
+  if (wakeReason&TTN_WAKE_LORA) {
+    debugSerial.print(F(" LoRa"));
+    ledblink = 1;
+    ledcolor = TTN_GREEN;
+  }
+
+  if (wakeReason&TTN_WAKE_BTN_PRESS) {
+    debugSerial.print(F(" PRESS"));
+  }
+  
+  if (wakeReason&TTN_WAKE_BTN_RELEASE) {
+    debugSerial.print(F(" RELEASE"));
+  }
+
+  if (wakeReason&TTN_WAKE_MOTION_START) {
+    ledblink = 1;
+    ledcolor = TTN_RED;
+    debugSerial.print(F(" MOTION_START"));
+  }
+  if (wakeReason&TTN_WAKE_MOTION_STOP)  {
+    ledblink = 2;
+    ledcolor = TTN_RED;
+    debugSerial.print(F(" MOTION_STOP"));
+  }
+
+  if (wakeReason&TTN_WAKE_TEMPERATURE) {
+    debugSerial.print(F(" TEMPERATURE"));
+  }
+  
+  debugSerial.println();
 
   // Just if you want to see this IRQ with a LED, remove for LOW power
-  //node->setColor(TTN_GREEN);
-  //delay(50);
-  //node->setColor(TTN_BLACK);
-  //delay(100);
+  while (ledblink--) {
+    node->setColor(ledcolor);
+    delay(50);
+    node->setColor(TTN_BLACK);
+    delay(333);
+  }
 }
 
 void sleep()
@@ -94,20 +142,13 @@ void sendData(uint8_t port, uint32_t value)
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
   if (port == PORT_BUTTON) {
-    debugSerial.print(F("Button:\t"));
-    debugSerial.print(value);
-    debugSerial.println(F("ms"));
-    lpp.addAnalogInput(7, value/1000.0);
+	  debugSerial.print(F("Button:\t"));
+	  debugSerial.print(value);
+	  debugSerial.println(F("ms"));
+	  lpp.addAnalogInput(7, value/1000.0);
   }
 
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
-
-  // Set RN2483 to sleep mode
-  ttn.sleep( CONFIG_INTERVAL*1000 );
-
-  // This one is not optionnal, remove it
-  // and say bye bye to RN2983 sleep mode
-  delay(50);
 }
 
 void setup()
@@ -115,17 +156,20 @@ void setup()
   loraSerial.begin(57600);
   debugSerial.begin(9600);
 
-  // Wait a maximum of 10s for Serial Monitor
-  while (!debugSerial && millis() < 10000)
-    ;
+  // Wait a maximum of 5s for Serial Monitor
+  while (!debugSerial && millis() < 5000) {
+    node->setColor(TTN_RED);
+    delay(20);
+    node->setColor(TTN_BLACK);
+    delay(480);
+  };
 
   // Config Node, Disable all sensors 
   // Check node schematics here
   // https://github.com/TheThingsProducts/node
   node = TheThingsNode::setup();
 
-  // Each interval
-  node->configInterval(true, CONFIG_INTERVAL*1000); 
+
   node->onWake(wake);
   node->onInterval(interval);
   node->onSleep(sleep);
@@ -135,16 +179,32 @@ void setup()
 
   // Test sensors and set LED to GREEN if it works
   node->showStatus();
-  node->setColor(TTN_GREEN);
 
   debugSerial.println(F("-- TTN: STATUS"));
   ttn.showStatus();
 
+  // Each interval (with watchdog)
+  //node->configInterval(true, CONFIG_INTERVAL*1000); 
+
+  // Each interval (with Lora Module and Serial IRQ)
+  // Take care this one need to be called after any
+  // first call to ttn.* so object has been instancied
+  // if not &ttn will be null and watchdog
+  node->configInterval(&ttn, CONFIG_INTERVAL*1000); 
+
   debugSerial.println(F("-- TTN: JOIN"));
-  ttn.join(appEui, appKey);
+  node->setColor(TTN_MAGENTA);
+  if (ttn.join(appEui, appKey)) {
+    node->setColor(TTN_GREEN);
+  } else {
+    node->setColor(TTN_RED);
+  }
 
   debugSerial.println(F("-- SEND: SETUP"));
   sendData(PORT_SETUP);
+
+  // Enable USB deepsleep
+  //node->configUSB(true);
 }
 
 void loop()
