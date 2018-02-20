@@ -222,6 +222,7 @@ void TheThingsNode::loop()
     if (this->buttonPressed) {
       delay(dly);
       TTN_INTERVAL = TTN_INTERVAL + dly;
+
     } else {
       Serial.flush();
       deepSleep();
@@ -773,7 +774,6 @@ TheThingsNode::TheThingsNode()
   delay(100);
   digitalWrite(TTN_LORA_RESET, HIGH);
 #endif
-
 
   // TODO: Can we enable/disable this at will to save memory?
   USBCON |= (1 << OTGPADE);

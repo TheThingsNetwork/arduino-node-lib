@@ -26,6 +26,7 @@ CayenneLPP lpp(16);
 
 void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
+
 // This is called on each interval we defined so mainly
 // this is where we need to do our job
 void interval()
@@ -168,7 +169,6 @@ void setup()
   // Check node schematics here
   // https://github.com/TheThingsProducts/node
   node = TheThingsNode::setup();
-
 
   node->onWake(wake);
   node->onInterval(interval);
