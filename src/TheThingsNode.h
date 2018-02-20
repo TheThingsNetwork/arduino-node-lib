@@ -16,6 +16,58 @@
 #include <Hackscribble_MCP9804.h>
 #include "TheThingsNetwork.h"
 
+#define TTN_LDR_INPUT 10
+#define TTN_LDR_GAIN1 12
+#define TTN_LDR_GAIN2 4
+#define TTN_RED_LED 13
+#define TTN_GREEN_LED 5
+#define TTN_BLUE_LED 6
+#define TTN_BUTTON 16
+#define TTN_LORA_RESET 21 /* Hardware reset pin of LoRa module */
+#define TTN_LORA_SERIAL_RX_INT INT2 /* Serial RX Interrupt number (to be waked by RN2483 or RN2903 module) */
+#define TTN_VBAT_MEAS_EN A2
+#define TTN_VBAT_MEAS 1
+#define TTN_TEMPERATURE_SENSOR_ADDRESS 0x18
+#define TTN_TEMPERATURE_ALERT 14
+#define TTN_ACCELEROMETER_INT2 9
+
+#define TTN_ADDR_ACC 0x1D
+#define TTN_DR 5  // active data rate
+#define TTN_SR 3  // sleep data rate
+#define TTN_SC 4  // sleep delay
+#define TTN_MT 4  // 0.063g/LSB
+#define TTN_MDC 2 // debounce delay in samples
+#define TTN_SYSMOD 0x0B
+#define TTN_FF_MT_CFG 0x15
+#define TTN_FF_MT_SRC 0x16
+#define TTN_FF_MT_THS 0x17
+#define TTN_FF_MT_COUNT 0x18
+#define TTN_TRANSIENT_CFG 0x1D
+#define TTN_TRANSIENT_SRC 0x1E
+#define TTN_TRANSIENT_THS 0x1F
+#define TTN_TRANSIENT_COUNT 0x20
+#define TTN_ASLP_CNT 0x29
+#define TTN_CTRL_REG1 0x2A
+#define TTN_CTRL_REG2 0x2B
+#define TTN_CTRL_REG3 0x2C
+#define TTN_CTRL_REG4 0x2D
+#define TTN_CTRL_REG5 0x2E
+
+#define TTN_WAKE_TEMPERATURE  0x0001
+#define TTN_WAKE_MOTION_START 0x0002
+#define TTN_WAKE_MOTION_STOP  0x0004
+#define TTN_WAKE_BTN_PRESS    0x0008
+#define TTN_WAKE_BTN_RELEASE  0x0010
+#define TTN_WAKE_LORA         0x0020
+#define TTN_WAKE_WATCHDOG     0x0040
+#define TTN_WAKE_INTERVAL     0x0080
+
+#define TTN_WAKE_ANY          ( TTN_WAKE_TEMPERATURE | \
+                                TTN_WAKE_MOTION_START | TTN_WAKE_MOTION_STOP | \
+                                TTN_WAKE_BTN_PRESS | TTN_WAKE_BTN_RELEASE | \
+                                TTN_WAKE_LORA | \
+                                TTN_WAKE_WATCHDOG )
+
 enum ttn_color : byte
 {
   TTN_RED,
@@ -35,6 +87,8 @@ private:
   TheThingsNode(TheThingsNode const &);
   void operator=(TheThingsNode const &);
 
+  TheThingsNetwork *ttn;
+
   bool intervalEnabled;
   uint32_t intervalMs;
   uint32_t intervalSince;
@@ -52,7 +106,7 @@ private:
   bool USBDeepSleep;
   bool wdtStarted;
 
-  void (*wakeCallback)(void);
+  void (*wakeCallback)(uint8_t wakeStatus);
   void (*sleepCallback)(void);
   void (*temperatureCallback)(void);
   void (*motionStartCallback)(void);
@@ -78,7 +132,7 @@ public:
     return &node;
   };
 
-  void onWake(void (*callback)(void));
+  void onWake(void (*callback)(uint8_t wakeStatus));
   void loop();
   void onSleep(void (*callback)(void));
 
@@ -87,6 +141,7 @@ public:
   void onInterval(void (*callback)(void));
   void configInterval(bool enabled, uint32_t ms);
   void configInterval(bool enabled);
+  void configInterval(TheThingsNetwork *ttn, uint32_t ms);
 
   void configLight(bool enabled, uint8_t gain);
   void configLight(bool enabled);
