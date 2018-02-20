@@ -4,67 +4,30 @@
 #include <Arduino.h>
 #include <TheThingsNode.h>
 
-#define TTN_LDR_INPUT 10
-#define TTN_LDR_GAIN1 12
-#define TTN_LDR_GAIN2 4
-#define TTN_RED_LED 13
-#define TTN_GREEN_LED 5
-#define TTN_BLUE_LED 6
-#define TTN_BUTTON 16
-#define TTN_LORA_RESET 21
-#define TTN_VBAT_MEAS_EN A2
-#define TTN_VBAT_MEAS 1
-#define TTN_TEMPERATURE_SENSOR_ADDRESS 0x18
-#define TTN_TEMPERATURE_ALERT 14
-#define TTN_ACCELEROMETER_INT2 9
-
-#define TTN_ADDR_ACC 0x1D
-#define TTN_DR 5  // active data rate
-#define TTN_SR 3  // sleep data rate
-#define TTN_SC 4  // sleep delay
-#define TTN_MT 4  // 0.063g/LSB
-#define TTN_MDC 2 // debounce delay in samples
-#define TTN_SYSMOD 0x0B
-#define TTN_FF_MT_CFG 0x15
-#define TTN_FF_MT_SRC 0x16
-#define TTN_FF_MT_THS 0x17
-#define TTN_FF_MT_COUNT 0x18
-#define TTN_TRANSIENT_CFG 0x1D
-#define TTN_TRANSIENT_SRC 0x1E
-#define TTN_TRANSIENT_THS 0x1F
-#define TTN_TRANSIENT_COUNT 0x20
-#define TTN_ASLP_CNT 0x29
-#define TTN_CTRL_REG1 0x2A
-#define TTN_CTRL_REG2 0x2B
-#define TTN_CTRL_REG3 0x2C
-#define TTN_CTRL_REG4 0x2D
-#define TTN_CTRL_REG5 0x2E
-
 Hackscribble_MCP9804 TTN_TEMPERATURE_SENSOR(TTN_TEMPERATURE_SENSOR_ADDRESS);
 
-volatile bool TTN_TEMPERATURE = false;
-volatile bool TTN_MOTION_START = false;
-volatile bool TTN_MOTION_STOP = false;
-volatile bool TTN_BUTTON_PRESS = false;
-volatile bool TTN_BUTTON_RELEASE = false;
+volatile uint16_t wakeStatus;
 volatile uint32_t TTN_INTERVAL = 0;
 
 void TTN_TEMPERATURE_FN()
 {
-  TTN_TEMPERATURE = true;
+  wakeStatus |= TTN_WAKE_TEMPERATURE;
   TTN_TEMPERATURE_SENSOR.clearAlert();
 }
 
 void TTN_MOTION_FN()
 {
   uint8_t trigger = getPinChangeInterruptTrigger(digitalPinToPCINT(TTN_ACCELEROMETER_INT2));
+  // Reset according bits
+  wakeStatus &= ~ (TTN_WAKE_MOTION_START|TTN_WAKE_MOTION_STOP);
+
   if (trigger == RISING)
   {
-    TTN_MOTION_START = true;
+    wakeStatus |= TTN_WAKE_MOTION_START;
   }
   else if (trigger == FALLING)
   {
-    TTN_MOTION_STOP = true;
+    wakeStatus |= TTN_WAKE_MOTION_STOP;
   }
 }
 
@@ -73,18 +36,30 @@ void TTN_BUTTON_FN()
   uint8_t trigger = getPinChangeInterruptTrigger(digitalPinToPCINT(TTN_BUTTON));
   if (trigger == FALLING)
   {
-    TTN_BUTTON_PRESS = true;
+    wakeStatus |= TTN_WAKE_BTN_PRESS;
   }
 
   // Be sure main loop ACK press button before rising the release 
-  if (TTN_BUTTON_PRESS == false && trigger == RISING ) 
+  if (trigger == RISING /*&& !(wakeStatus&TTN_WAKE_BTN_PRESS)*/) 
   {
-    TTN_BUTTON_RELEASE = true;
+    wakeStatus |= TTN_WAKE_BTN_RELEASE;
   }
+}
+
+void TTN_SERIAL_LORA_FN()
+{
+  if ( digitalRead(0) == 0 ) {
+    wakeStatus |= TTN_WAKE_LORA;
+  }
+  // Just used to wake up we can now
+  // mask this interrupt because serial 
+  // will become verbose
+  EIMSK &= ~(1 << INT2);
 }
 
 ISR(WDT_vect)
 {
+  wakeStatus |= TTN_WAKE_WATCHDOG;
   TTN_INTERVAL = TTN_INTERVAL + 8000;
 }
 
@@ -92,7 +67,7 @@ ISR(WDT_vect)
  * PUBLIC
  *****************************************************************************/
 
-void TheThingsNode::onWake(void (*callback)(void))
+void TheThingsNode::onWake(void (*callback)(uint8_t wakeStatus))
 {
   this->wakeCallback = callback;
 }
@@ -127,12 +102,16 @@ void TheThingsNode::loop()
     }
   }
 
-  if (this->wakeCallback)
-  {
-    this->wakeCallback();
+  if (TTN_INTERVAL >= this->intervalMs) {
+    wakeStatus |= TTN_WAKE_INTERVAL;
   }
 
-  if (TTN_BUTTON_PRESS)
+  if (this->wakeCallback)
+  {
+    this->wakeCallback(wakeStatus);
+  }
+
+  if (wakeStatus & TTN_WAKE_BTN_PRESS)
   {
     if (!this->buttonPressed)
     {
@@ -143,10 +122,11 @@ void TheThingsNode::loop()
       }
       this->buttonPressed = true;
     }
-    TTN_BUTTON_PRESS = false;
-  }
-
-  if (TTN_BUTTON_RELEASE)
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_BTN_PRESS;
+  } 
+  // At least one loop instance between press and release so else if here
+  else if (wakeStatus & TTN_WAKE_BTN_RELEASE)
   {
     if (this->buttonPressed)
     {
@@ -156,10 +136,11 @@ void TheThingsNode::loop()
       }
       this->buttonPressed = false;
     }
-    TTN_BUTTON_RELEASE = false;
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_BTN_RELEASE;
   }
 
-  if (TTN_MOTION_START)
+  if (wakeStatus & TTN_WAKE_MOTION_START)
   {
     if (!this->motionStarted)
     {
@@ -170,10 +151,11 @@ void TheThingsNode::loop()
       }
       this->motionStarted = true;
     }
-    TTN_MOTION_START = false;
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_MOTION_START;
   }
 
-  if (TTN_MOTION_STOP)
+  if (wakeStatus & TTN_WAKE_MOTION_STOP)
   {
     if (this->motionStarted)
     {
@@ -183,25 +165,39 @@ void TheThingsNode::loop()
       }
       this->motionStarted = false;
     }
-    TTN_MOTION_STOP = false;
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_MOTION_STOP;
   }
 
-  if (TTN_TEMPERATURE)
+  if (wakeStatus & TTN_WAKE_TEMPERATURE)
   {
     if (this->temperatureEnabled && this->temperatureCallback)
     {
       this->temperatureCallback();
     }
-    TTN_TEMPERATURE = false;
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_TEMPERATURE;
   }
 
-  if (TTN_INTERVAL >= this->intervalMs)
+  if (wakeStatus & TTN_WAKE_INTERVAL)  
   {
     if (this->intervalEnabled && this->intervalCallback)
     {
       this->intervalCallback();
     }
+    // Ack our watchdog and interval interrupt
+    wakeStatus &= ~(TTN_WAKE_WATCHDOG|TTN_WAKE_INTERVAL);
     TTN_INTERVAL = 0;
+  }
+
+  if (wakeStatus & TTN_WAKE_LORA)
+  {
+    if (this->intervalEnabled && this->intervalCallback)
+    {
+      this->intervalCallback();
+    }
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_LORA;
   }
 
   if (this->sleepCallback)
@@ -209,23 +205,26 @@ void TheThingsNode::loop()
     this->sleepCallback();
   }
 
+  // If button pushed manage loop faster 
+  uint16_t dly = this->buttonPressed ? 10 : 100;
+
   if (this->isUSBConnected() && !this->USBDeepSleep)
   {
 
-    while (!TTN_BUTTON_PRESS && !TTN_BUTTON_RELEASE && !TTN_MOTION_START && !TTN_MOTION_STOP && !TTN_TEMPERATURE && TTN_INTERVAL < this->intervalMs)
+    while (!(wakeStatus&TTN_WAKE_ANY) && TTN_INTERVAL < this->intervalMs)
     {
-      delay(100);
-      TTN_INTERVAL = TTN_INTERVAL + 100;
+      delay(dly);
+      TTN_INTERVAL = TTN_INTERVAL + dly;
     }
   }
   else
   {
     // Don't go to sleep mode while button is still pressed
     // because if so, timer of ms will be stopped and duration
-    // of pressed button will not work
+    // of pressed button will not work, this acting like a debounce
     if (this->buttonPressed) {
-      delay(100);
-      TTN_INTERVAL = TTN_INTERVAL + 100;
+      delay(dly);
+      TTN_INTERVAL = TTN_INTERVAL + dly;
     } else {
       Serial.flush();
       deepSleep();
@@ -293,12 +292,19 @@ void TheThingsNode::showStatus()
 void TheThingsNode::configInterval(bool enabled, uint32_t ms)
 {
   this->intervalMs = ms;
-
   configInterval(enabled);
+}
+
+void TheThingsNode::configInterval(TheThingsNetwork *ttn, uint32_t ms)
+{
+  this->intervalMs = ms;
+  this->ttn = ttn;
+  this->intervalEnabled = true;
 }
 
 void TheThingsNode::configInterval(bool enabled)
 {
+  this->ttn = NULL;
   this->intervalEnabled = enabled;
 }
 
@@ -327,7 +333,23 @@ void TheThingsNode::configLight(bool enabled)
     return;
   }
 
-  if (enabled)
+  // Ok be sure to set it to low power mode
+  if (!enabled)
+  {
+    digitalWrite(TTN_LDR_GAIN1, LOW);
+    digitalWrite(TTN_LDR_GAIN2, LOW);
+    // Just to be sure, see datasheet, at least 1.5ms to enable Low Power
+    delay(2);
+  }
+
+  this->lightEnabled = enabled;
+}
+
+uint16_t TheThingsNode::getLight()
+{
+  uint16_t value = 0;
+
+  if ( this->lightEnabled)
   {
     switch (this->lightGain)
     {
@@ -348,21 +370,20 @@ void TheThingsNode::configLight(bool enabled)
       digitalWrite(TTN_LDR_GAIN2, HIGH);
       break;
     }
-  }
-  else
-  {
+    // Wait to settle
+    delay(1);
+
+    // Read value
+    value = analogRead(TTN_LDR_INPUT);
+
+    // Go back to sleep mode
     digitalWrite(TTN_LDR_GAIN1, LOW);
     digitalWrite(TTN_LDR_GAIN2, LOW);
+    // Just to be sure, see datasheet, at least 1.5ms to enable Low Power
+    delay(2);
   }
 
-  this->lightEnabled = enabled;
-}
-
-uint16_t TheThingsNode::getLight()
-{
-  // TODO: if (this->lightEnabled)
-
-  return analogRead(TTN_LDR_INPUT);
+  return value;
 }
 
 /******************************************************************************
@@ -748,13 +769,13 @@ TheThingsNode::TheThingsNode()
   pinMode(TTN_BLUE_LED, OUTPUT);
   setColor(TTN_BLACK);
 
-  // hardware reset of LoRa module, so module is reset on sketch upload 
-  #ifdef TTN_LORA_RESET
+  // reset RN2483 module, this allow to reset module on sketch upload also
+#ifdef TTN_LORA_RESET
   pinMode(TTN_LORA_RESET, OUTPUT);
   digitalWrite(TTN_LORA_RESET, LOW);
   delay(100);
   digitalWrite(TTN_LORA_RESET, HIGH);
-  #endif
+#endif
 
 
   // TODO: Can we enable/disable this at will to save memory?
@@ -864,7 +885,7 @@ void TheThingsNode::WDT_start()
   cli();
   MCUSR &= ~(1 << WDRF);
   WDTCSR |= (1 << WDCE) | (1 << WDE);
-  WDTCSR = 1 << WDP0 | 0 << WDP1 | 0 << WDP2 | 1 << WDP3; /* 2.0 seconds */
+  WDTCSR = 1 << WDP0 | 0 << WDP1 | 0 << WDP2 | 1 << WDP3; /* 8.0 seconds */
   WDTCSR |= _BV(WDIE);
   sei();
 
@@ -890,6 +911,31 @@ void TheThingsNode::WDT_stop()
 
 void TheThingsNode::deepSleep(void)
 {
+  // We want to be awake by LoRa module ?
+  if (this->ttn) {
+    // watchdog Not needed, avoid wake every 8S
+    WDT_stop(); 
+
+  // Set LoRa module sleep mode
+  //  ttn.sleep( CONFIG_INTERVAL*1000 );
+    this->ttn->sleep(this->intervalMs);
+    // This one is not optionnal, remove it
+    // and say bye bye to RN2483 or RN2903 sleep mode
+    delay(50);
+
+    // Module need to wake us with interrupt
+    attachInterrupt(TTN_LORA_SERIAL_RX_INT, TTN_SERIAL_LORA_FN, FALLING);
+
+    // switch all interrupts off while messing with their settings  
+    cli();  
+    bitSet(EIFR,INTF2); // clear any pending interrupts for serial RX pin (INT2 D0)
+    sei();
+
+  } else {
+    // watchdog needed for wakeup
+    WDT_start(); 
+  }
+
   ADCSRA &= ~_BV(ADEN);
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   MCUCR |= (1 << JTD);
