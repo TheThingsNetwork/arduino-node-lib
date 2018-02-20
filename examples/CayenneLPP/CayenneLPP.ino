@@ -118,7 +118,11 @@ void sendData(uint8_t port)
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 
   // Set RN2483 to sleep mode
-  ttn.sleep( 60000 );
+  ttn.sleep(60000);
+
+  // This one is not optionnal, remove it
+  // and say bye bye to RN2483 or RN2903 sleep mode
+  delay(50);
 }
 
 void printSensors()
