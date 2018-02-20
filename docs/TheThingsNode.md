@@ -116,12 +116,14 @@ void onInterval(void(*callback)(void));
 ```c
 void configInterval(bool enabled, uint32_t ms);
 void configInterval(bool enabled);
+void configInterval(TheThingsNetwork *pttn, uint32_t ms);
 ```
 
 - `bool enabled`: Enable or disable the interval callback. Enabled automatically by `onInterval()`, but you can use this method to temporarily disable it. Defaults to `false`.
+- `TheThingsNetwork * pttn`: This enable the interval callback but in this mode, the interval is passed to RN2483 or RN2903 module (this is why we need to pass pointer to object) with `sys sleep` command and then it's the LoRa module that wake up the node.
 - `uint32_t ms`: Minimal time between calling the interval callback. Defaults to `60000` or 60 seconds.
 
-> If the Node has no USB data connection or is configured to also sleep in that case, it will only wake up every 8 seconds to check if the interval callback should run. This means setting `ms` to less than `8000` makes no sense. It also means that the maximum time between calls can be up to 8 seconds longer than `ms` if it wakes up to handle button or sensor interaction in between.
+> If the Node has no USB data connection or is configured to also sleep in that case, it will only wake up every 8 seconds to check if the interval callback should run. This means setting `ms` to less than `8000` makes no sense. It also means that the maximum time between calls can be up to 8 seconds longer than `ms` if it wakes up to handle button or sensor interaction in between. This does not apply when wake up by LoRa module.
 
 ## Method: showStatus
 Writes information about the device and sensors to `Serial`.
