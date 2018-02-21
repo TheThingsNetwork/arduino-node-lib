@@ -181,6 +181,8 @@ public:
   void configUSB(bool deepSleep);
 
   uint16_t getBattery();
+  uint16_t readADCLowNoise(bool average);
+  uint16_t getVcc();
 };
 
 #endif

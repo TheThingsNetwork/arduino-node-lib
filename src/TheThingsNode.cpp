@@ -8,6 +8,7 @@ Hackscribble_MCP9804 TTN_TEMPERATURE_SENSOR(TTN_TEMPERATURE_SENSOR_ADDRESS);
 
 volatile uint16_t wakeStatus;
 volatile uint32_t TTN_INTERVAL = 0;
+volatile uint8_t  adcIRQCnt;
 
 void TTN_TEMPERATURE_FN()
 {
@@ -59,6 +60,15 @@ ISR(WDT_vect)
   wakeStatus |= TTN_WAKE_WATCHDOG;
   TTN_INTERVAL = TTN_INTERVAL + 8000;
 }
+
+ISR(ADC_vect)  
+{
+  // Increment ADC counter
+  adcIRQCnt++;
+}
+
+
+
 
 /******************************************************************************
  * PUBLIC
@@ -710,6 +720,102 @@ void TheThingsNode::setColor(ttn_color color)
 /******************************************************************************
  * BATTERY
  */
+uint16_t TheThingsNode::readADCLowNoise(bool average)
+{
+  uint8_t low, high;
+  uint16_t sum = 0;
+  
+  // Start 1st Conversion, but ignore it, can be hazardous
+  ADCSRA |= _BV(ADSC); 
+  
+  // wait for first dummy conversion
+  while (bit_is_set(ADCSRA,ADSC));
+
+  // Init our measure counter
+  adcIRQCnt = 0;
+
+  // We want to have a interrupt when the conversion is done
+  ADCSRA |= _BV( ADIE );
+
+  // Loop thru samples
+  // 8 samples (we don't take the 1st one)
+  do {
+    // Enable Noise Reduction Sleep Mode
+    set_sleep_mode( SLEEP_MODE_ADC );
+    sleep_enable();
+
+    // Wait until conversion is finished 
+    do {
+      // enabled IRQ before sleeping
+      sei();
+      sleep_cpu();
+      cli();
+    }
+    // Check is done with interrupts disabled to avoid a race condition
+    while (bit_is_set(ADCSRA,ADSC));
+
+    // No more sleeping
+    sleep_disable();
+    sei();
+    
+    // read low first
+    low  = ADCL;
+    high = ADCH;
+    
+    // Sum the total
+    sum += ((high << 8) | low);
+  }
+  while (adcIRQCnt<8);
+  
+  // No more interrupts needed for this
+  // we finished the job
+  ADCSRA &= ~ _BV( ADIE );
+  
+  // Return the average divided by 8 (8 samples)
+  return ( average ? sum >> 3 : sum );
+}
+
+/* ======================================================================
+Function: getVcc
+Purpose : Read and Calculate V powered, the Voltage on Arduino VCC pin
+Input   : -
+Output  : value readed
+Comments: ADC Channel input is modified
+====================================================================== */
+uint16_t TheThingsNode::getVcc() 
+{
+  uint16_t value; 
+  uint16_t vcc; 
+
+  // Enable ADC (just in case going out of low power)
+  power_adc_enable();
+  ADCSRA |= _BV(ADEN)  ;
+
+  // Read 1.1V reference against AVcc
+  // REFS1 REFS0          --> 0 1, AVcc internal ref. -Selects AVcc external reference
+  // MUX4 MUX3 MUX2 MUX1 MUX0  --> 011110 1.1V (VBG)        -Selects channel 14, bandgap voltage, to measure
+  ADMUX = (0<<REFS1) | (1<<REFS0) | (0<<ADLAR) | (1<<MUX4) | (1<<MUX3) | (1<<MUX2) | (1<<MUX1) | (0<<MUX0);
+
+  // Take care, changing reference from VCC to 1.1V bandgap can take some time, this is due
+  // to the fact that the capacitor on aref pin need to discharge
+  // or to charge when we're just leaving power down mode
+  // power down does not hurt and 15ms strong enough for ADC setup
+  delay(15);  
+
+  // read value
+  value = readADCLowNoise(true);
+
+  // Vcc reference in millivolts
+  vcc =  ( 1023L * 1100L) / value ; 
+  
+  // Operating range of ATMega
+  if (vcc < 1800 ) vcc = 1800 ;
+  if (vcc > 5500 ) vcc = 5500 ;
+    
+  // Vcc in millivolts
+  return ( vcc ); 
+}
+
 
 uint16_t TheThingsNode::getBattery()
 {
@@ -719,6 +825,10 @@ uint16_t TheThingsNode::getBattery()
   uint16_t batteryVoltage = map(val, 0, 1024, 0, 3300) * 2; // *2 for voltage divider
   return batteryVoltage;
 }
+
+
+
+
 
 /******************************************************************************
  * USB
