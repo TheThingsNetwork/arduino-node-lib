@@ -90,12 +90,15 @@ void wake(uint8_t wakeReason)
   debugSerial.println();
 
   // Just if you want to see this IRQ with a LED, remove for LOW power
+  /*
   while (ledblink--) {
     node->setColor(ledcolor);
     delay(50);
     node->setColor(TTN_BLACK);
     delay(333);
   }
+  */
+
 }
 
 void sleep()
@@ -131,9 +134,25 @@ void sendData(uint8_t port, uint32_t value)
   // Read battery voltage
   uint16_t vbat = node->getBattery();
 
-  debugSerial.print(F("Battery:\t"));
+  debugSerial.print(F("Bat: "));
   debugSerial.print(vbat);
   debugSerial.println(F("mV"));
+
+  // This one is usefull when battery < 2.5V  below reference ADC 2.52V
+  // because in this case reading are wrong, but you can use it 
+  // as soon as VCC < 3.3V, 
+  // when above 3.3V; since regulator fix 3.3V you should read 3300mV
+  uint16_t vcc = node->getVcc();
+  debugSerial.print(F("Vcc: "));
+  debugSerial.print(vcc);
+  debugSerial.println(F("mV"));
+
+/*
+  uint16_t vrn = ttn.getVDD();
+  debugSerial.print(F("VRN: "));
+  debugSerial.print(vrn);
+  debugSerial.println(F("mV"));
+  */
 
   // Just send battery voltage 
   lpp.reset();
