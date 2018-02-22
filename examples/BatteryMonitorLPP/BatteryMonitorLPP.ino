@@ -17,15 +17,15 @@ const char *appKey = "00000000000000000000000000000000";
 #define PORT_MOTION 3
 #define PORT_BUTTON 4
 
-TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
-TheThingsNode *node;
-CayenneLPP lpp(24);
-
 // Interval between send in seconds, so 300s = 5min
 #define CONFIG_INTERVAL ((uint32_t)300)
 
-void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
+TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
+TheThingsNode *node;
+CayenneLPP lpp(24);
+char buf[24]; // For printf 
 
+void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
 // This is called on each interval we defined so mainly
 // this is where we need to do our job
@@ -41,10 +41,11 @@ void interval()
 // but if it's an interupt it will ne bone ine loop
 void wake(uint8_t wakeReason)
 {
-  debugSerial.print(F("-- WAKE 0x"));
-  debugSerial.print(wakeReason, HEX);
   uint8_t ledcolor = TTN_BLACK;
   uint8_t ledblink = 0 ;
+
+  snprintf_P(buf, sizeof(buf), PSTR("-- WAKE 0x%02X"), wakeReason);
+  debugSerial.println(buf);
 
   if (wakeReason&(TTN_WAKE_WATCHDOG|TTN_WAKE_INTERVAL)) {
     ledcolor = TTN_YELLOW;
@@ -57,21 +58,17 @@ void wake(uint8_t wakeReason)
       ledblink++;
     }
   }
-
   if (wakeReason&TTN_WAKE_LORA) {
-    debugSerial.print(F(" LoRa"));
+    debugSerial.print(F(" LoRa RNxxxx"));
     ledblink = 1;
     ledcolor = TTN_GREEN;
   }
-
   if (wakeReason&TTN_WAKE_BTN_PRESS) {
     debugSerial.print(F(" PRESS"));
   }
-  
   if (wakeReason&TTN_WAKE_BTN_RELEASE) {
     debugSerial.print(F(" RELEASE"));
   }
-
   if (wakeReason&TTN_WAKE_MOTION_START) {
     ledblink = 1;
     ledcolor = TTN_RED;
@@ -82,22 +79,21 @@ void wake(uint8_t wakeReason)
     ledcolor = TTN_RED;
     debugSerial.print(F(" MOTION_STOP"));
   }
-
   if (wakeReason&TTN_WAKE_TEMPERATURE) {
     debugSerial.print(F(" TEMPERATURE"));
   }
   
   debugSerial.println();
 
-  // Just if you want to see this IRQ with a LED, remove for LOW power
-/*
-  while (ledblink--) {
-    node->setColor(ledcolor);
-    delay(50);
-    node->setColor(TTN_BLACK);
-    delay(333);
-  }
-*/
+  // Just if you want to see this IRQ with a LED
+  // just uncomment, but take care, not LOW power
+  //while (ledblink--) {
+  //  node->setColor(ledcolor);
+  //  delay(50);
+  //  node->setColor(TTN_BLACK);
+  //  delay(333);
+  //}
+
 }
 
 void sleep()
@@ -118,55 +114,53 @@ void onButtonRelease(unsigned long duration)
 
   node->setColor(TTN_BLUE);
 
-  debugSerial.print(F("-- SEND: BUTTON "));
-  debugSerial.print(timepressed);
-  debugSerial.println(F(" ms"));
+  sprintf_P(buf, PSTR("-- SEND: BUTTON %d ms"), timepressed);
+  debugSerial.println(buf);
 
   sendData(PORT_BUTTON, timepressed);
 }
 
 void sendData(uint8_t port, uint32_t value)
 {
+  uint16_t volt;
+
   // Wake RN2483 
   ttn.wake();
 
-  // Read battery voltage
-  uint16_t vbat = node->getBattery();
+  // Prepare cayenne payload
+  lpp.reset();
 
-  debugSerial.print(F("Bat:\t"));
-  debugSerial.print(vbat);
-  debugSerial.println(F("mV"));
+  // Read battery voltage
+  volt = node->getBattery();
+  sprintf_P(buf, PSTR("Bat:\t %dmV"), volt);
+  debugSerial.println(buf);
+  lpp.addAnalogInput(4, volt/1000.0);
 
   // This one is usefull when battery < 2.5V  below reference ADC 2.52V
   // because in this case reading are wrong, but you can use it 
   // as soon as VCC < 3.3V, 
   // when above 3.3V, since regulator fix 3.3V you should read 3300mV
-  uint16_t vcc = node->getVcc();
-  debugSerial.print(F("Vcc:\t"));
-  debugSerial.print(vcc);
-  debugSerial.println(F("mV"));
+  volt = node->getVcc();
+  sprintf_P(buf, PSTR("Vcc:\t %dmV"), volt);
+  debugSerial.println(buf);
+  lpp.addAnalogInput(5, volt/1000.0);
 
-  uint16_t vrn = ttn.getVDD();
-  debugSerial.print(F("VRN:\t"));
-  debugSerial.print(vrn);
-  debugSerial.println(F("mV"));
-
-  // Just send battery voltage 
-  lpp.reset();
-  lpp.addAnalogInput(4, vbat/1000.0);
-  lpp.addAnalogInput(5, vcc/1000.0);
-  lpp.addAnalogInput(6, vrn/1000.0);
+  // Read value returned by RN2483 module
+  volt = ttn.getVDD();
+  sprintf_P(buf, PSTR("Vrn:\t %dmV"), volt);
+  debugSerial.println(buf);
+  lpp.addAnalogInput(6, volt/1000.0);
 
   // If button pressed, send press duration
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
   if (port == PORT_BUTTON) {
-	  debugSerial.print(F("Button:\t"));
-	  debugSerial.print(value);
-	  debugSerial.println(F("ms"));
+    sprintf_P(buf, PSTR("Btn:\t %dms"), value);
+    debugSerial.println(buf);
 	  lpp.addAnalogInput(7, value/1000.0);
   }
 
+  // Send data
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 }
 
@@ -207,9 +201,10 @@ void setup()
   // Each interval (with Lora Module and Serial IRQ)
   // Take care this one need to be called after any
   // first call to ttn.* so object has been instancied
-  // if not &ttn will be null and watchdog
+  // if not &ttn will be null and watchdog will wake us
   node->configInterval(&ttn, CONFIG_INTERVAL*1000); 
 
+  // Magenta during join, is joined then green else red
   debugSerial.println(F("-- TTN: JOIN"));
   node->setColor(TTN_MAGENTA);
   if (ttn.join(appEui, appKey)) {
