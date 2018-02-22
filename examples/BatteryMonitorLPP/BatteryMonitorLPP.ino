@@ -19,7 +19,7 @@ const char *appKey = "00000000000000000000000000000000";
 
 TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
 TheThingsNode *node;
-CayenneLPP lpp(16);
+CayenneLPP lpp(24);
 
 // Interval between send in seconds, so 300s = 5min
 #define CONFIG_INTERVAL ((uint32_t)300)
@@ -90,15 +90,14 @@ void wake(uint8_t wakeReason)
   debugSerial.println();
 
   // Just if you want to see this IRQ with a LED, remove for LOW power
-  /*
+/*
   while (ledblink--) {
     node->setColor(ledcolor);
     delay(50);
     node->setColor(TTN_BLACK);
     delay(333);
   }
-  */
-
+*/
 }
 
 void sleep()
@@ -134,29 +133,29 @@ void sendData(uint8_t port, uint32_t value)
   // Read battery voltage
   uint16_t vbat = node->getBattery();
 
-  debugSerial.print(F("Bat: "));
+  debugSerial.print(F("Bat:\t"));
   debugSerial.print(vbat);
   debugSerial.println(F("mV"));
 
   // This one is usefull when battery < 2.5V  below reference ADC 2.52V
   // because in this case reading are wrong, but you can use it 
   // as soon as VCC < 3.3V, 
-  // when above 3.3V; since regulator fix 3.3V you should read 3300mV
+  // when above 3.3V, since regulator fix 3.3V you should read 3300mV
   uint16_t vcc = node->getVcc();
-  debugSerial.print(F("Vcc: "));
+  debugSerial.print(F("Vcc:\t"));
   debugSerial.print(vcc);
   debugSerial.println(F("mV"));
 
-/*
   uint16_t vrn = ttn.getVDD();
-  debugSerial.print(F("VRN: "));
+  debugSerial.print(F("VRN:\t"));
   debugSerial.print(vrn);
   debugSerial.println(F("mV"));
-  */
 
   // Just send battery voltage 
   lpp.reset();
   lpp.addAnalogInput(4, vbat/1000.0);
+  lpp.addAnalogInput(5, vcc/1000.0);
+  lpp.addAnalogInput(6, vrn/1000.0);
 
   // If button pressed, send press duration
   // please myDeviceCayenne add counter value type to
