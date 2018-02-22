@@ -41,7 +41,7 @@ void TTN_BUTTON_FN()
   }
 
   // Be sure main loop ACK press button before rising the release 
-  if (trigger == RISING /*&& !(wakeStatus&TTN_WAKE_BTN_PRESS)*/) 
+  if (trigger == RISING && !(wakeStatus&TTN_WAKE_BTN_PRESS)) 
   {
     wakeStatus |= TTN_WAKE_BTN_RELEASE;
   }
@@ -129,7 +129,6 @@ void TheThingsNode::loop()
       }
       this->buttonPressed = true;
     }
-    // ACK our interrupt
     wakeStatus &= ~TTN_WAKE_BTN_PRESS;
   } 
   // At least one loop instance between press and release so else if here
@@ -143,7 +142,6 @@ void TheThingsNode::loop()
       }
       this->buttonPressed = false;
     }
-    // ACK our interrupt
     wakeStatus &= ~TTN_WAKE_BTN_RELEASE;
   }
 
@@ -238,6 +236,8 @@ void TheThingsNode::loop()
       deepSleep();
     }
   }
+
+
 }
 
 void TheThingsNode::onSleep(void (*callback)(void))
