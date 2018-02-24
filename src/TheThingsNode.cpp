@@ -1049,6 +1049,7 @@ void TheThingsNode::deepSleep(void)
   USBCON |= (1 << FRZCLK);
   //USBCON &= ~_BV(USBE);
   PLLCSR &= ~_BV(PLLE);
+  UHWCON &= ~_BV(UVREGE); // Disable USB Regulator
   sleep_enable();
   sleep_mode(); //Sweet dreams!
 
@@ -1056,6 +1057,7 @@ void TheThingsNode::deepSleep(void)
   sleep_disable();
   PLLCSR |= (1 << PLLE);
   power_all_enable();
+  UHWCON |= (1<<UVREGE); // enable USB
   //USBCON |= (1 << USBE);
   USBCON &= ~_BV(FRZCLK);
   ADCSRA |= (1 << ADEN);
