@@ -20,6 +20,9 @@ CayenneLPP lpp(51);
 #define PORT_MOTION 3
 #define PORT_BUTTON 4
 
+// Interval between send in seconds, so 300s = 5min
+#define CONFIG_INTERVAL ((uint32_t)300)
+
 void setup()
 {
   loraSerial.begin(57600);
@@ -40,15 +43,29 @@ void setup()
   node->onMotionStart(onMotionStart);
   node->onButtonRelease(onButtonRelease);
 
-  // Test sensors and set LED to GREEN if it works
+  // Test sensors 
   node->showStatus();
-  node->setColor(TTN_GREEN);
 
   debugSerial.println("-- TTN: STATUS");
   ttn.showStatus();
 
-  debugSerial.println("-- TTN: JOIN");
-  ttn.join(appEui, appKey);
+  // Each interval (with watchdog)
+  //node->configInterval(true, CONFIG_INTERVAL*1000); 
+
+  // Each interval (with Lora Module and Serial IRQ)
+  // Take care this one need to be called after any
+  // first call to ttn.* so object has been instancied
+  // if not &ttn will be null and watchdog will wake us
+  node->configInterval(&ttn, CONFIG_INTERVAL*1000); 
+
+  // Magenta during join, if joined then green else red
+  debugSerial.println(F("-- TTN: JOIN"));
+  node->setColor(TTN_MAGENTA);
+  if (ttn.join(appEui, appKey)) {
+    node->setColor(TTN_GREEN);
+  } else {
+    node->setColor(TTN_RED);
+  }
 
   debugSerial.println("-- SEND: SETUP");
   sendData(PORT_SETUP);
@@ -97,7 +114,6 @@ void onButtonRelease(unsigned long duration)
 
 void sendData(uint8_t port)
 {
-
   // Wake RN2483
   ttn.wake();
 
@@ -116,13 +132,6 @@ void sendData(uint8_t port)
   lpp.addAccelerometer(7, x, y, z);
   
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
-
-  // Set RN2483 to sleep mode
-  ttn.sleep(60000);
-
-  // This one is not optionnal, remove it
-  // and say bye bye to RN2483 or RN2903 sleep mode
-  delay(50);
 }
 
 void printSensors()
