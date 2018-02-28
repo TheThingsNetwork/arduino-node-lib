@@ -39,9 +39,7 @@ void TTN_BUTTON_FN()
   {
     wakeStatus |= TTN_WAKE_BTN_PRESS;
   }
-
-  // Be sure main loop ACK press button before rising the release 
-  if (trigger == RISING && !(wakeStatus&TTN_WAKE_BTN_PRESS)) 
+  else if (trigger == RISING) 
   {
     wakeStatus |= TTN_WAKE_BTN_RELEASE;
   }
@@ -109,11 +107,9 @@ void TheThingsNode::loop()
     }
   }
 
-  if (TTN_INTERVAL >= this->intervalMs) {
-    wakeStatus |= TTN_WAKE_INTERVAL;
-  }
-
-  if (this->wakeCallback)
+  // We sure to be called only once when button still pressed
+  // Button management will start only below this code
+  if (this->wakeCallback && !this->buttonPressed)
   {
     this->wakeCallback(wakeStatus);
   }
@@ -122,17 +118,36 @@ void TheThingsNode::loop()
   {
     if (!this->buttonPressed)
     {
-      this->buttonPressedAt = millis();
-      if (this->buttonEnabled && this->buttonPressCallback)
-      {
-        this->buttonPressCallback();
-      }
       this->buttonPressed = true;
+
+      // Check still pressed for at least 10ms
+      for (uint8_t i=0; i<10; i++) 
+      {
+        // Soft debouncing
+        if (digitalRead(TTN_BUTTON)==HIGH) 
+        {
+          this->buttonPressed = false;
+          // just in case, this is a bad press
+          wakeStatus &= ~TTN_WAKE_BTN_RELEASE;
+        }
+        delay(1);
+      }
+
+      if (this->buttonPressed)
+      {
+        this->buttonPressedAt = millis();
+        if (this->buttonEnabled && this->buttonPressCallback)
+        {
+          this->buttonPressCallback();
+        }
+      }
     }
+    // ACK our IRQ press, now all is in this->
     wakeStatus &= ~TTN_WAKE_BTN_PRESS;
   } 
+  
   // At least one loop instance between press and release so else if here
-  else if (wakeStatus & TTN_WAKE_BTN_RELEASE)
+  if (wakeStatus & TTN_WAKE_BTN_RELEASE)
   {
     if (this->buttonPressed)
     {
@@ -140,6 +155,7 @@ void TheThingsNode::loop()
       {
         this->buttonReleaseCallback(millis() - this->buttonPressedAt);
       }
+      this->buttonPressedAt = 0;
       this->buttonPressed = false;
     }
     wakeStatus &= ~TTN_WAKE_BTN_RELEASE;
@@ -184,38 +200,42 @@ void TheThingsNode::loop()
     wakeStatus &= ~TTN_WAKE_TEMPERATURE;
   }
 
-  if (wakeStatus & TTN_WAKE_INTERVAL)  
-  {
-    if (this->intervalEnabled && this->intervalCallback)
-    {
-      this->intervalCallback();
-    }
-    // Ack our watchdog and interval interrupt
-    wakeStatus &= ~(TTN_WAKE_WATCHDOG|TTN_WAKE_INTERVAL);
-    TTN_INTERVAL = 0;
-  }
-
   if (wakeStatus & TTN_WAKE_LORA)
   {
-    if (this->pttn && this->intervalCallback)
-    {
-      this->intervalCallback();
-    }
+    // This is mainly our interval
+    wakeStatus |= TTN_WAKE_INTERVAL;
+
     // ACK our interrupt
     wakeStatus &= ~TTN_WAKE_LORA;
   }
 
-  if (this->sleepCallback)
+  if (wakeStatus & TTN_WAKE_WATCHDOG)  
   {
-    this->sleepCallback();
+    if (TTN_INTERVAL >= this->intervalMs) {
+      wakeStatus |= TTN_WAKE_INTERVAL;
+    }
+    // ACK our interrupt
+    wakeStatus &= ~TTN_WAKE_WATCHDOG;
+  }
+
+  if (wakeStatus & TTN_WAKE_INTERVAL)  
+  {
+    if (this->intervalEnabled && this->intervalCallback)
+    {
+      this->intervalCallback(wakeStatus);
+    }
+    // Ack our interval interrupt
+    wakeStatus &= ~TTN_WAKE_INTERVAL;
+    TTN_INTERVAL = 0;
   }
 
   // If button pushed manage loop faster 
   uint16_t dly = this->buttonPressed ? 10 : 100;
 
+  // USB is connected and so sleep on USB
   if (this->isUSBConnected() && !this->USBDeepSleep)
   {
-
+    // Loop until pseudo wake event (because we're not sleeping) or interval
     while (!(wakeStatus&TTN_WAKE_ANY) && TTN_INTERVAL < this->intervalMs)
     {
       delay(dly);
@@ -230,8 +250,14 @@ void TheThingsNode::loop()
     if (this->buttonPressed) {
       delay(dly);
       TTN_INTERVAL = TTN_INTERVAL + dly;
+    }
+    else 
+    {
+      if (this->sleepCallback)
+      {
+        this->sleepCallback();
+      }
 
-    } else {
       Serial.flush();
       deepSleep();
     }
@@ -316,7 +342,7 @@ void TheThingsNode::configInterval(bool enabled)
   this->intervalEnabled = enabled;
 }
 
-void TheThingsNode::onInterval(void (*callback)(void))
+void TheThingsNode::onInterval(void (*callback)(uint8_t wakeStatus))
 {
   this->intervalCallback = callback;
 
@@ -1023,8 +1049,7 @@ void TheThingsNode::deepSleep(void)
     // watchdog Not needed, avoid wake every 8S
     WDT_stop(); 
 
-  // Set LoRa module sleep mode
-  //  ttn.sleep( CONFIG_INTERVAL*1000 );
+    // Set LoRa module sleep mode
     this->pttn->sleep(this->intervalMs);
     // This one is not optionnal, remove it
     // and say bye bye to RN2483 or RN2903 sleep mode
@@ -1043,22 +1068,33 @@ void TheThingsNode::deepSleep(void)
     WDT_start(); 
   }
 
-  ADCSRA &= ~_BV(ADEN);
+  bitClear(ADCSRA, ADEN);
+  bitSet(MCUCR, JTD);
+  bitSet(USBCON,FRZCLK); // Disable USB clock 
+  bitClear(PLLCSR, PLLE); // Disable USB PLL
+  bitClear(USBCON, USBE); // Disable USB
+  bitClear(UHWCON, UVREGE); // Disable USB Regulator
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  MCUCR |= (1 << JTD);
-  USBCON |= (1 << FRZCLK);
-  //USBCON &= ~_BV(USBE);
-  PLLCSR &= ~_BV(PLLE);
-  UHWCON &= ~_BV(UVREGE); // Disable USB Regulator
   sleep_enable();
   sleep_mode(); //Sweet dreams!
 
   //wake up, after ISR we arrive here ->
   sleep_disable();
-  PLLCSR |= (1 << PLLE);
   power_all_enable();
-  UHWCON |= (1<<UVREGE); // enable USB
-  //USBCON |= (1 << USBE);
-  USBCON &= ~_BV(FRZCLK);
-  ADCSRA |= (1 << ADEN);
+
+  // Be sure any com to LoRa module don't fire a IRQ
+  cli();  
+  EIMSK &= ~(1 << INT2); // Mask interrupt line
+  bitSet(EIFR,INTF2); // clear any pending interrupts for serial RX pin (INT2 D0)
+  sei();
+
+  bitSet(ADCSRA, ADEN);
+
+  // We need to enable back USB there, because we have
+  // some debug print in code and if not enabled it will
+  // lock the program, but since it's only when we're awake
+  // it's not a real Low Power issue
+  USBDevice.attach(); 
 }
+
+ 
