@@ -113,7 +113,7 @@ private:
   void (*motionStopCallback)(unsigned long duration);
   void (*buttonPressCallback)(void);
   void (*buttonReleaseCallback)(unsigned long duration);
-  void (*intervalCallback)(void);
+  void (*intervalCallback)(uint8_t wakeStatus);
 
   void wakeTemperature();
   void sleepTemperature();
@@ -138,7 +138,7 @@ public:
 
   void showStatus();
 
-  void onInterval(void (*callback)(void));
+  void onInterval(void (*callback)(uint8_t wakeStatus));
   void configInterval(bool enabled, uint32_t ms);
   void configInterval(bool enabled);
   void configInterval(TheThingsNetwork *pttn, uint32_t ms);
