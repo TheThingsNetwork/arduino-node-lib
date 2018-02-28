@@ -1,3 +1,11 @@
+// This sketch use advanced Ultra Low Power techniques
+// for this it disable all uneede peripherals during sleep mode, including
+// USB Management, this mean you won't be able to upload anymore if the node is sleeping
+// when wake up, Lora transmission is aprox 3s (including receive windows) this means
+// that you have 3 seconds windows to upload, so unless you're lucky, it's almost impossible
+// to sync Arduino compilation and upload. But to avoid this, you can press the node button
+// for more than 2s, then the led will yellow blink quickly for 60s, letting you time to upload 
+
 #include <TheThingsNode.h>
 #include <TheThingsNetwork.h>
 #include <CayenneLPP.h>
@@ -12,10 +20,15 @@ const char *appKey = "00000000000000000000000000000000";
 #define loraSerial Serial1
 #define debugSerial Serial
 
-#define PORT_SETUP 1
-#define PORT_INTERVAL 2
-#define PORT_MOTION 3
-#define PORT_BUTTON 4
+#define PORT_SETUP         1
+#define PORT_BTN_PRESS    10
+#define PORT_BTN_RELEASE  11
+#define PORT_MOTION_START 20
+#define PORT_MOTION_END   21
+#define PORT_WATCHDOG     30
+#define PORT_INTERVAL     31
+#define PORT_LORA         32
+#define PORT_TEMPERATURE  33
 
 // Interval between send in seconds, so 300s = 5min
 #define CONFIG_INTERVAL ((uint32_t)300)
@@ -23,17 +36,27 @@ const char *appKey = "00000000000000000000000000000000";
 TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
 TheThingsNode *node;
 CayenneLPP lpp(24);
+
+uint8_t fport = PORT_SETUP; // LoRaWAN port used 
+
 char buf[24]; // For printf 
 
 void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
 // This is called on each interval we defined so mainly
 // this is where we need to do our job
-void interval()
+void interval(uint8_t wakeReason)
 {
-  node->setColor(TTN_BLUE);
-  debugSerial.println(F("-- SEND: INTERVAL"));
-  sendData(PORT_INTERVAL);
+  uint8_t fport = PORT_INTERVAL;
+  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: INTERVAL 0x%02X"), wakeReason);
+  debugSerial.println(buf);
+
+  if (wakeReason&TTN_WAKE_LORA) 
+  {
+    fport = PORT_LORA;
+  }
+
+  sendData(fport);
 }
 
 // This is called on each wake, every 8S or by an sensor/button interrupt
@@ -41,8 +64,11 @@ void interval()
 // but if it's an interupt it will ne bone ine loop
 void wake(uint8_t wakeReason)
 {
-  uint8_t ledcolor = TTN_BLACK;
+  ttn_color ledcolor = TTN_BLACK;
   uint8_t ledblink = 0 ;
+
+  //node->setColor(TTN_MAGENTA);
+  //delay(5000);
 
   snprintf_P(buf, sizeof(buf), PSTR("-- WAKE 0x%02X"), wakeReason);
   debugSerial.println(buf);
@@ -93,7 +119,6 @@ void wake(uint8_t wakeReason)
   //  node->setColor(TTN_BLACK);
   //  delay(333);
   //}
-
 }
 
 void sleep()
@@ -112,17 +137,30 @@ void onButtonRelease(unsigned long duration)
   uint16_t adc_value;
   uint32_t timepressed = (uint32_t) duration;
 
-  node->setColor(TTN_BLUE);
-
   sprintf_P(buf, PSTR("-- SEND: BUTTON %d ms"), timepressed);
   debugSerial.println(buf);
 
-  sendData(PORT_BUTTON, timepressed);
+  // If button was pressed for more then 2 seconds
+  if (timepressed > 2000) {
+    // blink yellow led for 60 seconds
+    // this will let us to upload new sketch if needed
+    for (uint8_t i=0 ; i<60 ; i++) {
+      node->setColor(TTN_YELLOW);
+      delay(30);
+      node->setColor(TTN_BLACK);
+      delay(470);
+    }
+  }
+
+  // then send data
+  sendData(PORT_BTN_RELEASE, timepressed);
 }
 
 void sendData(uint8_t port, uint32_t value)
 {
   uint16_t volt;
+
+  node->setColor(TTN_CYAN);
 
   // Wake RN2483 
   ttn.wake();
@@ -154,13 +192,15 @@ void sendData(uint8_t port, uint32_t value)
   // If button pressed, send press duration
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
-  if (port == PORT_BUTTON) {
+  if (value) {
     sprintf_P(buf, PSTR("Btn:\t %dms"), value);
     debugSerial.println(buf);
 	  lpp.addAnalogInput(7, value/1000.0);
   }
 
+  node->setColor(TTN_BLUE);
   // Send data
+  //ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 }
 
@@ -189,7 +229,7 @@ void setup()
   // We monitor just button release
   node->onButtonRelease(onButtonRelease);
 
-  // Test sensors and set LED to GREEN if it works
+  // Test sensors 
   node->showStatus();
 
   debugSerial.println(F("-- TTN: STATUS"));
@@ -206,7 +246,7 @@ void setup()
 
   // Magenta during join, is joined then green else red
   debugSerial.println(F("-- TTN: JOIN"));
-  node->setColor(TTN_MAGENTA);
+  node->setColor(TTN_BLUE);
   if (ttn.join(appEui, appKey)) {
     node->setColor(TTN_GREEN);
   } else {
@@ -216,8 +256,8 @@ void setup()
   debugSerial.println(F("-- SEND: SETUP"));
   sendData(PORT_SETUP);
 
-  // Enable USB deepsleep
-  //node->configUSB(true);
+  // Enable sleep even connected with USB cable
+  node->configUSB(true);
 }
 
 void loop()
