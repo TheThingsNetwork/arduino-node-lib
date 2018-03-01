@@ -40,7 +40,7 @@ This will:
 ## Method: onWake
 Set a callback that will run first thing every time the Node wakes up, which is when an interrupt changes because of interaction with the button, motion sensor, temperature sensor or LoRa device wake.
 
-Depending on [`configInterval()`](#method-configInterval) setup, this method can be called: 
+Depending on [`configInterval()`](#method-configinterval) setup, this method can be called: 
 
 - When you instructed the LoRa RN2xxx device to wake up after the specific interval.
 - Every 8 seconds (Watchdog), which is the longest we can make it sleep.
@@ -152,7 +152,8 @@ void interval(uint8_t wakeReason) {
     node->showStatus();
 }
 ```
-See [`onWake()`](#method-onWake) for definition of wakeReason: 
+See [`onWake()`](#method-onwake) for definition of wakeReason: 
+
 
 ### Method: onInterval
 Set a callback that will run on a certain interval. This will automatically enable the interval.
@@ -163,7 +164,7 @@ void onInterval(void(*callback)(uint8_t wakeReason));
 
 - `void(*callback)(uint8_t wakeReason)`: Function to be called.
 
-See [`onWake()`](#method-onWake) for definition of wakeReason: 
+See [`onWake()`](#method-onwake) for definition of wakeReason: 
 
 ### Method: configInterval
 
@@ -531,7 +532,7 @@ uint16_t getVcc();
 ```
 
 ### Alternative Method: getVDD
-You can also use the getVDD from TheThingNetworkLibrary.
+You can also use the getVDD from [TTN Device Library](https://github.com/TheThingsNetwork/arduino-device-lib).
 
 Returns the voltage in millivolt (mV) measured by the RN2xxx LoRa module. It's for information only since we don't know how it's measured.
 
