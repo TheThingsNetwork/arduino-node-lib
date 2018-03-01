@@ -106,14 +106,14 @@ private:
   bool USBDeepSleep;
   bool wdtStarted;
 
-  void (*wakeCallback)(uint8_t wakeStatus);
+  void (*wakeCallback)(uint8_t wakeReason);
   void (*sleepCallback)(void);
   void (*temperatureCallback)(void);
   void (*motionStartCallback)(void);
   void (*motionStopCallback)(unsigned long duration);
   void (*buttonPressCallback)(void);
   void (*buttonReleaseCallback)(unsigned long duration);
-  void (*intervalCallback)(uint8_t wakeStatus);
+  void (*intervalCallback)(uint8_t wakeReason);
 
   void wakeTemperature();
   void sleepTemperature();
@@ -132,13 +132,13 @@ public:
     return &node;
   };
 
-  void onWake(void (*callback)(uint8_t wakeStatus));
+  void onWake(void (*callback)(uint8_t wakeReason));
   void loop();
   void onSleep(void (*callback)(void));
 
   void showStatus();
 
-  void onInterval(void (*callback)(uint8_t wakeStatus));
+  void onInterval(void (*callback)(uint8_t wakeReason));
   void configInterval(bool enabled, uint32_t ms);
   void configInterval(bool enabled);
   void configInterval(TheThingsNetwork *pttn, uint32_t ms);
