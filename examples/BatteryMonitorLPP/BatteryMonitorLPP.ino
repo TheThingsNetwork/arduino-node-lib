@@ -1,7 +1,7 @@
 // This sketch use advanced Ultra Low Power techniques
-// for this it disable all uneede peripherals during sleep mode, including
+// for this it disable all unneeded peripherals during sleep mode, including
 // USB Management, this mean you won't be able to upload anymore if the node is sleeping
-// when wake up, Lora transmission is aprox 3s (including receive windows) this means
+// when wake up, Lora transmission is approx 3s (including receive windows) this means
 // that you have 3 seconds windows to upload, so unless you're lucky, it's almost impossible
 // to sync Arduino compilation and upload. But to avoid this, you can press the node button
 // for more than 2s, then the led will yellow blink quickly for 60s, letting you time to upload 
@@ -67,9 +67,6 @@ void wake(uint8_t wakeReason)
   ttn_color ledcolor = TTN_BLACK;
   uint8_t ledblink = 0 ;
 
-  //node->setColor(TTN_MAGENTA);
-  //delay(5000);
-
   snprintf_P(buf, sizeof(buf), PSTR("-- WAKE 0x%02X"), wakeReason);
   debugSerial.println(buf);
 
@@ -134,10 +131,9 @@ void sleep()
 
 void onButtonRelease(unsigned long duration)
 {
-  uint16_t adc_value;
   uint32_t timepressed = (uint32_t) duration;
 
-  sprintf_P(buf, PSTR("-- SEND: BUTTON %d ms"), timepressed);
+  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: BUTTON %d ms"), timepressed);
   debugSerial.println(buf);
 
   // If button was pressed for more then 2 seconds
@@ -160,8 +156,6 @@ void sendData(uint8_t port, uint32_t value)
 {
   uint16_t volt;
 
-  node->setColor(TTN_CYAN);
-
   // Wake RN2483 
   ttn.wake();
 
@@ -170,7 +164,7 @@ void sendData(uint8_t port, uint32_t value)
 
   // Read battery voltage
   volt = node->getBattery();
-  sprintf_P(buf, PSTR("Bat:\t %dmV"), volt);
+  snprintf_P(buf, sizeof(buf), PSTR("Bat:\t %dmV"), volt);
   debugSerial.println(buf);
   lpp.addAnalogInput(4, volt/1000.0);
 
@@ -179,13 +173,13 @@ void sendData(uint8_t port, uint32_t value)
   // as soon as VCC < 3.3V, 
   // when above 3.3V, since regulator fix 3.3V you should read 3300mV
   volt = node->getVcc();
-  sprintf_P(buf, PSTR("Vcc:\t %dmV"), volt);
+  snprintf_P(buf, sizeof(buf), PSTR("Vcc:\t %dmV"), volt);
   debugSerial.println(buf);
   lpp.addAnalogInput(5, volt/1000.0);
 
   // Read value returned by RN2483 module
   volt = ttn.getVDD();
-  sprintf_P(buf, PSTR("Vrn:\t %dmV"), volt);
+  snprintf_P(buf, sizeof(buf), PSTR("Vrn:\t %dmV"), volt);
   debugSerial.println(buf);
   lpp.addAnalogInput(6, volt/1000.0);
 
@@ -193,9 +187,9 @@ void sendData(uint8_t port, uint32_t value)
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
   if (value) {
-    sprintf_P(buf, PSTR("Btn:\t %dms"), value);
+    snprintf_P(buf, sizeof(buf), PSTR("Btn:\t %dms"), value);
     debugSerial.println(buf);
-	  lpp.addAnalogInput(7, value/1000.0);
+	  lpp.addAnalogInput(10, value/1000.0);
   }
 
   node->setColor(TTN_BLUE);
