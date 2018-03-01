@@ -4,7 +4,7 @@ TheThingsNode *node;
 
 void setup() {
     node = TheThingsNode::setup();
-    node->onWake(voidFn);
+    node->onWake(wakeFn);
     node->onSleep(voidFn);
     node->onInterval(onInterval);
     node->configInterval(false, 60000);
@@ -37,6 +37,7 @@ void setup() {
 }
 
 void voidFn() {}
+void wakeFn(uint8_t wakeStatus) {}
 
 void durationFn(unsigned long duration) {}
 
