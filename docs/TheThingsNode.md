@@ -52,7 +52,7 @@ the parameter wakeReason is indicating what waked the node and can be a bit fiel
 | Wake by | Interval | Watchdog | LoRa | Btn Release | Btn Press | Motion Stop | Motion Start | Temperature |
 
 Is declared into the library as follow:
-```
+```c
 #define TTN_WAKE_TEMPERATURE  0x01
 #define TTN_WAKE_MOTION_START 0x02
 #define TTN_WAKE_MOTION_STOP  0x04
