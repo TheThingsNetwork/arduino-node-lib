@@ -44,7 +44,7 @@ void loop() {
     node->loop();
 }
 
-void onInterval() {
+void onInterval(uint8_t wakeStatus) {
     node->showStatus();
     uint16_t light = node->getLight();
     int8_t tempFloat = node->getTemperatureAsFloat();

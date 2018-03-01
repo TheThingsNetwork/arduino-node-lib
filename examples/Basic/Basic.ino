@@ -80,7 +80,7 @@ void loop()
   node->loop();
 }
 
-void interval()
+void interval(int8_t wakeStatus)
 {
   node->setColor(TTN_BLUE);
 
