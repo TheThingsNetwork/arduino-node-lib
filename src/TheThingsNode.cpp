@@ -20,7 +20,7 @@ void TTN_MOTION_FN()
 {
   uint8_t trigger = getPinChangeInterruptTrigger(digitalPinToPCINT(TTN_ACCELEROMETER_INT2));
   // Reset according bits
-  wakeStatus &= ~ (TTN_WAKE_MOTION_START|TTN_WAKE_MOTION_STOP);
+  wakeStatus &= ~ (TTN_WAKE_MOTION_START | TTN_WAKE_MOTION_STOP);
 
   if (trigger == RISING)
   {
@@ -236,7 +236,7 @@ void TheThingsNode::loop()
   if (this->isUSBConnected() && !this->USBDeepSleep)
   {
     // Loop until pseudo wake event (because we're not sleeping) or interval
-    while (!(wakeStatus&TTN_WAKE_ANY) && TTN_INTERVAL < this->intervalMs)
+    while (!(wakeStatus & TTN_WAKE_ANY) && this->intervalMs > TTN_INTERVAL)
     {
       delay(dly);
       TTN_INTERVAL = TTN_INTERVAL + dly;
@@ -326,7 +326,8 @@ void TheThingsNode::showStatus()
 void TheThingsNode::configInterval(bool enabled, uint32_t ms)
 {
   this->intervalMs = ms;
-  configInterval(enabled);
+  this->pttn = NULL;
+  this->intervalEnabled = enabled;
 }
 
 void TheThingsNode::configInterval(TheThingsNetwork *ttn, uint32_t ms)
@@ -755,19 +756,21 @@ uint16_t TheThingsNode::readADCLowNoise(bool average)
   ADCSRA |= _BV(ADSC); 
   
   // wait for first dummy conversion
-  while (bit_is_set(ADCSRA,ADSC));
+  while (bit_is_set(ADCSRA,ADSC))
+  {
+  };
 
   // Init our measure counter
   adcIRQCnt = 0;
 
   // We want to have a interrupt when the conversion is done
-  ADCSRA |= _BV( ADIE );
+  ADCSRA |= _BV(ADIE);
 
   // Loop thru samples
   // 8 samples (we don't take the 1st one)
   do {
     // Enable Noise Reduction Sleep Mode
-    set_sleep_mode( SLEEP_MODE_ADC );
+    set_sleep_mode(SLEEP_MODE_ADC);
     sleep_enable();
 
     // Wait until conversion is finished 
@@ -778,7 +781,7 @@ uint16_t TheThingsNode::readADCLowNoise(bool average)
       cli();
     }
     // Check is done with interrupts disabled to avoid a race condition
-    while (bit_is_set(ADCSRA,ADSC));
+    while (bit_is_set(ADCSRA, ADSC));
 
     // No more sleeping
     sleep_disable();
@@ -798,24 +801,17 @@ uint16_t TheThingsNode::readADCLowNoise(bool average)
   ADCSRA &= ~ _BV( ADIE );
   
   // Return the average divided by 8 (8 samples)
-  return ( average ? sum >> 3 : sum );
+  return (average ? sum >> 3 : sum);
 }
 
-/* ======================================================================
-Function: getVcc
-Purpose : Read and Calculate V powered, the Voltage on Arduino VCC pin
-Input   : -
-Output  : value readed
-Comments: ADC Channel input is modified
-====================================================================== */
-uint16_t TheThingsNode::getVcc() 
+uint16_t TheThingsNode::getVCC() 
 {
   uint16_t value; 
   uint16_t vcc; 
 
   // Enable ADC (just in case going out of low power)
   power_adc_enable();
-  ADCSRA |= _BV(ADEN)  ;
+  ADCSRA |= _BV(ADEN);
 
   // Read 1.1V reference against AVcc
   // REFS1 REFS0          --> 0 1, AVcc internal ref. -Selects AVcc external reference
@@ -832,14 +828,21 @@ uint16_t TheThingsNode::getVcc()
   value = readADCLowNoise(true);
 
   // Vcc reference in millivolts
-  vcc =  ( 1023L * 1100L) / value ; 
+  vcc = (1023L * 1100L) / value; 
   
   // Operating range of ATMega
-  if (vcc < 1800 ) vcc = 1800 ;
-  if (vcc > 5500 ) vcc = 5500 ;
+  if (vcc < 1800)
+  {
+   vcc = 1800;
+  }
+
+  if (vcc > 5500)
+  {
+    vcc = 5500;
+  } 
     
   // Vcc in millivolts
-  return ( vcc ); 
+  return vcc; 
 }
 
 
@@ -903,7 +906,7 @@ TheThingsNode::TheThingsNode()
   pinMode(TTN_BLUE_LED, OUTPUT);
   setColor(TTN_BLACK);
 
-  // reset RN2483 module, this allow to reset module on sketch upload also
+  // reset RN2xx3 module, this allow to reset module on sketch upload also
 #ifdef TTN_LORA_RESET
   pinMode(TTN_LORA_RESET, OUTPUT);
   digitalWrite(TTN_LORA_RESET, LOW);
@@ -1062,7 +1065,6 @@ void TheThingsNode::deepSleep(void)
     cli();  
     bitSet(EIFR,INTF2); // clear any pending interrupts for serial RX pin (INT2 D0)
     sei();
-
   } else {
     // watchdog needed for wakeup
     WDT_start(); 
