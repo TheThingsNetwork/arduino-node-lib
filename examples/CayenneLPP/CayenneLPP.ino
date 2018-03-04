@@ -24,8 +24,6 @@ TheThingsNetwork ttn(loraSerial, debugSerial, freqPlan);
 TheThingsNode *node;
 CayenneLPP lpp(51);
 
-char buf[24]; // For printf 
-
 #define PORT_SETUP 1
 #define PORT_INTERVAL 2
 #define PORT_MOTION 3
@@ -94,15 +92,17 @@ void loop()
 
 void interval(uint8_t wakeReason)
 {
-  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: INTERVAL 0x%02X"), wakeReason);
-  debugSerial.println(buf);
+  debugSerial.print(F("-- SEND: INTERVAL 0x"));
+  debugSerial.print(wakeReason, HEX);
+  debugSerial.println(F("ms"));
   sendData(PORT_INTERVAL);
 }
 
 void wake(uint8_t wakeReason)
 {
-  snprintf_P(buf, sizeof(buf), PSTR("-- WAKE 0x%02X"), wakeReason);
-  debugSerial.println(buf);
+  debugSerial.print(F("-- WAKE: 0x"));
+  debugSerial.print(wakeReason, HEX);
+  debugSerial.println(F("ms"));
   node->setColor(TTN_GREEN);
 }
 
@@ -123,8 +123,9 @@ void onButtonRelease(unsigned long duration)
 {
   uint32_t timepressed = (uint32_t) duration;
 
-  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: BUTTON %d ms"), timepressed);
-  debugSerial.println(buf);
+  debugSerial.print(F("-- SEND: BUTTON "));
+  debugSerial.print(timepressed);
+  debugSerial.println(F("ms"));
 
   // If button was pressed for more then 2 seconds
   if (timepressed > 2000) {
@@ -174,9 +175,11 @@ void sendData(uint8_t port, uint32_t duration)
   // If button pressed, send press duration
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
-  if (duration) {
-    snprintf_P(buf, sizeof(buf), PSTR("Btn:\t %dms"), duration);
-    debugSerial.println(buf);
+  if (duration) 
+  {
+    debugSerial.print(F("Button pressed for "));
+    debugSerial.print(duration);
+    debugSerial.println(F("ms"));
     lpp.addAnalogInput(10, duration/1000.0);
   }
   
