@@ -81,31 +81,31 @@ void setup() {
 }
 
 void wake(uint8_t wakeReason) {
-  debugSerial.print(F("Wake Reason:0x"));
-  debugSerial.println(wakeReason,HEX);
+  debugSerial.print(F("Wake Reason: 0x"));
+  debugSerial.println(wakeReason, HEX);
 
-  if (wakeReason&TTN_WAKE_WATCHDOG) {
+  if (wakeReason & TTN_WAKE_WATCHDOG) {
     debugSerial.print(F("Watchdog "));
   }
-  if (wakeReason&TTN_WAKE_INTERVAL) {
+  if (wakeReason & TTN_WAKE_INTERVAL) {
     debugSerial.print(F("Interval "));
   }
-  if (wakeReason&TTN_WAKE_LORA) {
+  if (wakeReason & TTN_WAKE_LORA) {
     debugSerial.print(F("LoRa_RN2xxx "));
   }
-  if (wakeReason&TTN_WAKE_BTN_PRESS) {
+  if (wakeReason & TTN_WAKE_BTN_PRESS) {
     debugSerial.print(F("Button_Press "));
   }
-  if (wakeReason&TTN_WAKE_BTN_RELEASE) {
+  if (wakeReason & TTN_WAKE_BTN_RELEASE) {
     debugSerial.print(F("Button_release "));
   }
-  if (wakeReason&TTN_WAKE_MOTION_START) {
+  if (wakeReason & TTN_WAKE_MOTION_START) {
     debugSerial.print(F("Motion_Start "));
   }
-  if (wakeReason&TTN_WAKE_MOTION_STOP)  {
+  if (wakeReason & TTN_WAKE_MOTION_STOP)  {
     debugSerial.print(F("Motion_Stop "));
   }
-  if (wakeReason&TTN_WAKE_TEMPERATURE) {
+  if (wakeReason & TTN_WAKE_TEMPERATURE) {
     debugSerial.print(F("Temperature "));
   }
 }
@@ -175,7 +175,7 @@ void configInterval(TheThingsNetwork *pttn, uint32_t ms);
 ```
 
 - `bool enabled`: Enable or disable the interval callback. Enabled automatically by `onInterval()`, but you can use this method to temporarily disable it. Defaults to `false`.
-- `TheThingsNetwork * pttn`: This enable the interval callback but in this mode, the interval is passed to RN2483 or RN2903 module (this is why we need to pass pointer to object) with the command `sys sleep ms` and then it's the LoRa module that wake up the node. This is the most advanced Low Power Mode. In this mode, the watchdog is disabled and consuption again reduced.
+- `TheThingsNetwork * pttn`: This enable the interval callback but in this mode, the interval is passed to RN2483 or RN2903 module (this is why we need to pass pointer to object) with the command `sys sleep ms` and then it's the LoRa module that wake up the node. This is the most advanced Low Power Mode. In this mode, the watchdog is disabled and consumption again reduced.
 - `uint32_t ms`: Minimal time between calling the interval callback. Defaults to `60000` or 60 seconds.
 
 > If the Node has no USB data connection or is configured to also sleep in that case, it will only wake up every 8 seconds to check if the interval callback should run. This means setting `ms` to less than `8000` makes no sense. It also means that the maximum time between calls can be up to 8 seconds longer than `ms` if it wakes up to handle button or sensor interaction in between. This does not apply when wake up by LoRa module.
@@ -524,11 +524,11 @@ Returns the battery level in millivolt (mV) as a unsigned integer of 2 bytes. Th
 uint16_t getBattery();
 ```
 
-### Method: getVcc
+### Method: getVCC
 Returns the AT32U4 chip measured VCC voltage millivolt (mV) using the 1.1V internal Analog Reference voltage. This method is prefered when voltage before regulator comes to and below 3.3V. Moreover, if voltage is below 2.52V, using the method `getBattery` could return wrong values due to the main voltage < ADC reference voltage.
 
 ```c
-uint16_t getVcc();
+uint16_t getVCC();
 ```
 
 ### Alternative Method: getVDD
