@@ -253,7 +253,7 @@ void configTemperature(bool enabled, MCP9804_Resolution resolution);
 void configTemperature(bool enabled);
 ```
 
-- `bool enabled `: Enable or disable the temperature sensor. Enabled automatically by `onTemperature()`, but you can use this method to temporarily disable the sensor and therefore the alerts. Defaults to `false`.
+- `bool enabled `: Enable or disable the temperature sensor ALERTS. Enabled automatically by `onTemperature()`, but you can use this method to temporarily disable the alerts. Defaults to `false`.
 - `MCP9804_Resolution resolution = R_DEGREES_0_0625 `: Set the resolution (precision) of the sensor. One of:
     - `R_DEGREES_0_5000`: +0.5 C
     - `R_DEGREES_0_2500`: +0.25 C
