@@ -1,4 +1,5 @@
-// This sketch use advanced Ultra Low Power techniques
+// This sketch sends sensors dta tp Cayenne with LPP format
+// but it use advanced Ultra Low Power techniques
 // for this it disable all unneeded peripherals during sleep mode, including
 // USB Management, this mean you won't be able to upload anymore if the node is sleeping
 // when wake up, Lora transmission is approx 3s (including receive windows) this means
@@ -150,7 +151,7 @@ void sendData(uint8_t port, uint32_t duration)
   // also avoid error if VCC <  ADC reference (2.52V)
   if (bat <= 3300) 
   {
-    bat = node->getVcc();
+    bat = node->getVCC();
   }
 
   // Wake RN2483
