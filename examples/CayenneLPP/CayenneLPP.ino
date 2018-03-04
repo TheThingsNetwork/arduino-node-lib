@@ -50,7 +50,13 @@ void setup()
   // Config Node
   node = TheThingsNode::setup();
   node->configLight(true);
-  node->configTemperature(true);
+  node->configTemperature(false); // Just read temp, no alert monitoring (Low Power)
+
+  // If you want alerts (200uA to 400uA more consumption)
+  // node->configTemperature(true); // Alerts below 0C and over 30C and critical to 55C
+  // node->configTemperature(true, R_DEGREES_0_0625, 15, 25, 50); // Alerts below 15C and over 25C and critical to 50C
+  // node->onTemperatureAlert(yourAlertCallback); // Your alert callback
+
   node->onWake(wake);
   node->onInterval(interval);
   node->onSleep(sleep);
