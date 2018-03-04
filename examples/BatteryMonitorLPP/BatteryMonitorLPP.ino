@@ -39,8 +39,6 @@ CayenneLPP lpp(24);
 
 uint8_t fport = PORT_SETUP; // LoRaWAN port used 
 
-char buf[24]; // For printf 
-
 void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 
 // This is called on each interval we defined so mainly
@@ -48,8 +46,10 @@ void sendData(uint8_t port=PORT_SETUP, uint32_t duration=0);
 void interval(uint8_t wakeReason)
 {
   uint8_t fport = PORT_INTERVAL;
-  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: INTERVAL 0x%02X"), wakeReason);
-  debugSerial.println(buf);
+
+  debugSerial.print(F("-- SEND: INTERVAL 0x"));
+  debugSerial.print(wakeReason, HEX);
+  debugSerial.println(F("ms"));
 
   if (wakeReason&TTN_WAKE_LORA) 
   {
@@ -67,42 +67,43 @@ void wake(uint8_t wakeReason)
   ttn_color ledcolor = TTN_BLACK;
   uint8_t ledblink = 0 ;
 
-  snprintf_P(buf, sizeof(buf), PSTR("-- WAKE 0x%02X"), wakeReason);
-  debugSerial.println(buf);
-
-  if (wakeReason&(TTN_WAKE_WATCHDOG|TTN_WAKE_INTERVAL)) {
+  debugSerial.print(F("-- WAKE: 0x"));
+  debugSerial.print(wakeReason, HEX);
+  debugSerial.println(F("ms"));
+  
+  if (wakeReason & (TTN_WAKE_WATCHDOG | TTN_WAKE_INTERVAL)) {
     ledcolor = TTN_YELLOW;
     ledblink = 1;
-    if (wakeReason&TTN_WAKE_WATCHDOG) {
+    if (wakeReason & TTN_WAKE_WATCHDOG) {
       debugSerial.print(F(" Watchdog"));
     }
-    if (wakeReason&TTN_WAKE_INTERVAL) {
+    if (wakeReason & TTN_WAKE_INTERVAL) {
       debugSerial.print(F(" INTERVAL"));
       ledblink++;
     }
   }
-  if (wakeReason&TTN_WAKE_LORA) {
+  if (wakeReason & TTN_WAKE_LORA) {
     debugSerial.print(F(" LoRa RNxxxx"));
     ledblink = 1;
     ledcolor = TTN_GREEN;
   }
-  if (wakeReason&TTN_WAKE_BTN_PRESS) {
+  if (wakeReason & TTN_WAKE_BTN_PRESS) {
     debugSerial.print(F(" PRESS"));
   }
-  if (wakeReason&TTN_WAKE_BTN_RELEASE) {
+  if (wakeReason & TTN_WAKE_BTN_RELEASE) {
     debugSerial.print(F(" RELEASE"));
   }
-  if (wakeReason&TTN_WAKE_MOTION_START) {
+  if (wakeReason & TTN_WAKE_MOTION_START) {
     ledblink = 1;
     ledcolor = TTN_RED;
     debugSerial.print(F(" MOTION_START"));
   }
-  if (wakeReason&TTN_WAKE_MOTION_STOP)  {
+  if (wakeReason & TTN_WAKE_MOTION_STOP)  {
     ledblink = 2;
     ledcolor = TTN_RED;
     debugSerial.print(F(" MOTION_STOP"));
   }
-  if (wakeReason&TTN_WAKE_TEMPERATURE) {
+  if (wakeReason & TTN_WAKE_TEMPERATURE) {
     debugSerial.print(F(" TEMPERATURE"));
   }
   
@@ -133,7 +134,7 @@ void onButtonRelease(unsigned long duration)
 {
   uint32_t timepressed = (uint32_t) duration;
 
-  debugSerial.print(F("-- SEND: BUTTON" ));
+  debugSerial.print(F("-- SEND: BUTTON: " ));
   debugSerial.print(timepressed);
   debugSerial.println(F(" ms"));
 
@@ -165,8 +166,9 @@ void sendData(uint8_t port, uint32_t value)
 
   // Read battery voltage
   volt = node->getBattery();
-  snprintf_P(buf, sizeof(buf), PSTR("Bat:\t %dmV"), volt);
-  debugSerial.println(buf);
+  debugSerial.print(F("Bat:\t"));
+  debugSerial.print(volt);
+  debugSerial.println(F("mV"));
   lpp.addAnalogInput(4, volt/1000.0);
 
   // This one is usefull when battery < 2.5V  below reference ADC 2.52V
@@ -174,14 +176,16 @@ void sendData(uint8_t port, uint32_t value)
   // as soon as VCC < 3.3V, 
   // when above 3.3V, since regulator fix 3.3V you should read 3300mV
   volt = node->getVCC();
-  snprintf_P(buf, sizeof(buf), PSTR("Vcc:\t %dmV"), volt);
-  debugSerial.println(buf);
+  debugSerial.print(F("Vcc:\t"));
+  debugSerial.print(volt);
+  debugSerial.println(F("mV"));
   lpp.addAnalogInput(5, volt/1000.0);
 
   // Read value returned by RN2483 module
   volt = ttn.getVDD();
-  snprintf_P(buf, sizeof(buf), PSTR("Vrn:\t %dmV"), volt);
-  debugSerial.println(buf);
+  debugSerial.print(F("Vcc:\t"));
+  debugSerial.print(volt);
+  debugSerial.println(F("mV"));
   lpp.addAnalogInput(6, volt/1000.0);
 
   // If button pressed, send press duration
@@ -189,8 +193,9 @@ void sendData(uint8_t port, uint32_t value)
   // avoid us using analog values to send counters
   if (value) 
   {
-    snprintf_P(buf, sizeof(buf), PSTR("Button:\t %dms"), value);
-    debugSerial.println(buf);
+    debugSerial.print(F("Button pressed for "));
+    debugSerial.print(value);
+    debugSerial.println(F("ms"));
 	  lpp.addAnalogInput(10, value/1000.0);
   }
 
