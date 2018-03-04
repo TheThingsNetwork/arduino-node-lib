@@ -133,8 +133,9 @@ void onButtonRelease(unsigned long duration)
 {
   uint32_t timepressed = (uint32_t) duration;
 
-  snprintf_P(buf, sizeof(buf), PSTR("-- SEND: BUTTON %d ms"), timepressed);
-  debugSerial.println(buf);
+  debugSerial.print(F("-- SEND: BUTTON" ));
+  debugSerial.print(timepressed);
+  debugSerial.println(F(" ms"));
 
   // If button was pressed for more then 2 seconds
   if (timepressed > 2000) {
@@ -172,7 +173,7 @@ void sendData(uint8_t port, uint32_t value)
   // because in this case reading are wrong, but you can use it 
   // as soon as VCC < 3.3V, 
   // when above 3.3V, since regulator fix 3.3V you should read 3300mV
-  volt = node->getVcc();
+  volt = node->getVCC();
   snprintf_P(buf, sizeof(buf), PSTR("Vcc:\t %dmV"), volt);
   debugSerial.println(buf);
   lpp.addAnalogInput(5, volt/1000.0);
@@ -186,15 +187,15 @@ void sendData(uint8_t port, uint32_t value)
   // If button pressed, send press duration
   // please myDeviceCayenne add counter value type to
   // avoid us using analog values to send counters
-  if (value) {
-    snprintf_P(buf, sizeof(buf), PSTR("Btn:\t %dms"), value);
+  if (value) 
+  {
+    snprintf_P(buf, sizeof(buf), PSTR("Button:\t %dms"), value);
     debugSerial.println(buf);
 	  lpp.addAnalogInput(10, value/1000.0);
   }
 
   node->setColor(TTN_BLUE);
   // Send data
-  //ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
   ttn.sendBytes(lpp.getBuffer(), lpp.getSize(), port);
 }
 
