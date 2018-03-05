@@ -947,6 +947,14 @@ void TheThingsNode::wakeTemperature()
 
   TTN_TEMPERATURE_SENSOR.setMode(MODE_CONTINUOUS);
 
+  // If was in powerdown mode, let time to convert temperature
+  if (!this->temperatureEnabled) 
+  {
+    // See datasheet 5.2.4 (added 5ms each for security)
+    uint8_t dly[4] = { 35, 70, 135, 255};
+    delay( dly[TTN_TEMPERATURE_SENSOR.getResolution()]);
+  }
+
   this->temperatureSleep = false;
 }
 
