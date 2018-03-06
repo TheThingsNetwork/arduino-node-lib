@@ -34,14 +34,30 @@ void TTN_MOTION_FN()
 
 void TTN_BUTTON_FN()
 {
-  uint8_t trigger = getPinChangeInterruptTrigger(digitalPinToPCINT(TTN_BUTTON));
-  if (trigger == FALLING)
+  uint16_t i=2000; // approx 16ms (measured)
+  int16_t  btn=0;
+
+  // This loop duration is about 16 ms
+  // we are in IRQ, no millis() please, but as this IRQ just wake us
+  // it does not mind if we take some time, do go for software debouncing
+  while (i-- > 0 )
+  {
+    // If button read as press we add 1 else we remove 1
+    btn += (digitalRead(TTN_BUTTON) == LOW) ? 1 : -1 ;
+  }
+
+  // Assume button ok if we have enouhgt press/release
+  if (btn > 500) 
   {
     wakeStatus |= TTN_WAKE_BTN_PRESS;
   }
-  else if (trigger == RISING) 
+  else if (btn < 500) 
   {
     wakeStatus |= TTN_WAKE_BTN_RELEASE;
+  }
+  else 
+  {
+    // Bad press, bounce, interference, ...
   }
 }
 
@@ -120,26 +136,10 @@ void TheThingsNode::loop()
     {
       this->buttonPressed = true;
 
-      // Check still pressed for at least 10ms
-      for (uint8_t i=0; i<10; i++) 
+      this->buttonPressedAt = millis();
+      if (this->buttonEnabled && this->buttonPressCallback)
       {
-        // Soft debouncing
-        if (digitalRead(TTN_BUTTON)==HIGH) 
-        {
-          this->buttonPressed = false;
-          // just in case, this is a bad press
-          wakeStatus &= ~TTN_WAKE_BTN_RELEASE;
-        }
-        delay(1);
-      }
-
-      if (this->buttonPressed)
-      {
-        this->buttonPressedAt = millis();
-        if (this->buttonEnabled && this->buttonPressCallback)
-        {
-          this->buttonPressCallback();
-        }
+        this->buttonPressCallback();
       }
     }
     // ACK our IRQ press, now all is in this->
@@ -184,6 +184,7 @@ void TheThingsNode::loop()
       {
         this->motionStopCallback(millis() - this->motionStartedAt);
       }
+      this->motionStartedAt = 0;
       this->motionStarted = false;
     }
     // ACK our interrupt
@@ -235,6 +236,10 @@ void TheThingsNode::loop()
   // USB is connected and so sleep on USB
   if (this->isUSBConnected() && !this->USBDeepSleep)
   {
+    if (!this->buttonPressed) {
+      setColor(TTN_BLACK);
+    }
+
     // Loop until pseudo wake event (because we're not sleeping) or interval
     while (!(wakeStatus & TTN_WAKE_ANY) && this->intervalMs > TTN_INTERVAL)
     {
