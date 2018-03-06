@@ -88,7 +88,7 @@ void setup()
   sendData(PORT_SETUP);
 
   // Enable sleep even connected with USB cable
-  node->configUSB(true);
+  // node->configUSB(true);
 }
 
 void loop()
@@ -107,8 +107,7 @@ void interval(uint8_t wakeReason)
 void wake(uint8_t wakeReason)
 {
   debugSerial.print(F("-- WAKE: 0x"));
-  debugSerial.print(wakeReason, HEX);
-  debugSerial.println(F("ms"));
+  debugSerial.println(wakeReason, HEX);
   node->setColor(TTN_GREEN);
 }
 
@@ -121,8 +120,18 @@ void onMotionStart()
 {
   node->setColor(TTN_RED);
 
-  debugSerial.print("-- SEND: MOTION");
-  sendData(PORT_MOTION);
+  // This move has already been detected
+  // We need to detect stop motion before sending any new motion
+  // this avoid flooding network when the device is all time moving 
+  if (node->isMoving())
+  {
+    debugSerial.print("-- STILL MOVING");
+  }
+  else
+  {
+    debugSerial.print("-- SEND: START MOTION");
+    sendData(PORT_MOTION);
+  }
 }
 
 void onButtonRelease(unsigned long duration)
@@ -161,7 +170,7 @@ void sendData(uint8_t port, uint32_t duration)
     bat = node->getVCC();
   }
 
-  // Wake RN2483
+  // Wake Lora Module
   ttn.wake();
 
   printSensors();
