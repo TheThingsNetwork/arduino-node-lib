@@ -49,7 +49,6 @@ void interval(uint8_t wakeReason)
 
   debugSerial.print(F("-- SEND: INTERVAL 0x"));
   debugSerial.print(wakeReason, HEX);
-  debugSerial.println(F("ms"));
 
   if (wakeReason&TTN_WAKE_LORA) 
   {
@@ -68,8 +67,7 @@ void wake(uint8_t wakeReason)
   uint8_t ledblink = 0 ;
 
   debugSerial.print(F("-- WAKE: 0x"));
-  debugSerial.print(wakeReason, HEX);
-  debugSerial.println(F("ms"));
+  debugSerial.println(wakeReason, HEX);
   
   if (wakeReason & (TTN_WAKE_WATCHDOG | TTN_WAKE_INTERVAL)) {
     ledcolor = TTN_YELLOW;
@@ -257,7 +255,7 @@ void setup()
   sendData(PORT_SETUP);
 
   // Enable sleep even connected with USB cable
-  node->configUSB(true);
+  // node->configUSB(true);
 }
 
 void loop()
