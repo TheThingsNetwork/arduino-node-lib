@@ -119,6 +119,9 @@ void sendData(uint8_t port)
 
   // Set RN module to sleep mode
   ttn.sleep(60000);
+  // This one is not optionnal, remove it
+  // and say bye bye to RN2983 sleep mode
+  delay(50);
 }
 
 void printSensors()
