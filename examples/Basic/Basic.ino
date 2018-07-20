@@ -80,7 +80,7 @@ void loop()
   node->loop();
 }
 
-void interval()
+void interval(uint8_t wakeReason)
 {
   node->setColor(TTN_BLUE);
 
@@ -88,7 +88,7 @@ void interval()
   sendData(PORT_INTERVAL);
 }
 
-void wake()
+void wake(uint8_t wakeReason)
 {
   node->setColor(TTN_GREEN);
 }

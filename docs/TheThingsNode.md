@@ -38,13 +38,40 @@ This will:
 > Don't add any other code in your `loop()` function, but use [`onWake()`](#method-onwake), [`onInterval()`](#method-oninterval) and [`onSleep()`](#method-onsleep) instead, to prevent unpredictable behavior.
 
 ## Method: onWake
-Set a callback that will run first thing every time the Node wakes up, which is when an interrupt changes because of interaction with the button, motion sensor or temperature sensor. The device also wakes up every 8 seconds, which is the longest we can make it sleep.
+Set a callback that will run first thing every time the Node wakes up, which is when an interrupt changes because of interaction with the button, motion sensor, temperature sensor or LoRa device wake.
+
+Depending on [`configInterval()`](#method-configinterval) setup, this method can be called: 
+
+- When you instructed the LoRa RN2xxx device to wake up after the specific interval.
+- Every 8 seconds (Watchdog), which is the longest we can make it sleep.
+
+the parameter wakeReason is indicating what waked the node and can be a bit field of the following description
+
+| Bit  |   7   |   6   |   5   |   4   |   3   |   2   |   1   |   0   | 
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | 
+| Wake by | Interval | Watchdog | LoRa | Btn Release | Btn Press | Motion Stop | Motion Start | Temperature |
+
+Is declared into the library as follow:
+```c
+#define TTN_WAKE_TEMPERATURE  0x01
+#define TTN_WAKE_MOTION_START 0x02
+#define TTN_WAKE_MOTION_STOP  0x04
+#define TTN_WAKE_BTN_PRESS    0x08
+#define TTN_WAKE_BTN_RELEASE  0x10
+#define TTN_WAKE_LORA         0x20
+#define TTN_WAKE_WATCHDOG     0x40
+#define TTN_WAKE_INTERVAL     0x80
+```
+
+Note that of course, wake by TTN_WAKE_LORA also setup the TTN_WAKE_INTERVAL because we program the LoRa module to wake at the specified interval.
+
 
 ```c
-void onWake(void(*callback)(void));
+void onWake(void(*callback)(uint8_t wakeReason));
 ```
 
 Usage:
+
 
 ```c
 void setup() {
@@ -53,8 +80,34 @@ void setup() {
     node->onWake(wake);
 }
 
-void wake() {
-    node->setColor(TTN_GREEN);
+void wake(uint8_t wakeReason) {
+  debugSerial.print(F("Wake Reason: 0x"));
+  debugSerial.println(wakeReason, HEX);
+
+  if (wakeReason & TTN_WAKE_WATCHDOG) {
+    debugSerial.print(F("Watchdog "));
+  }
+  if (wakeReason & TTN_WAKE_INTERVAL) {
+    debugSerial.print(F("Interval "));
+  }
+  if (wakeReason & TTN_WAKE_LORA) {
+    debugSerial.print(F("LoRa_RN2xxx "));
+  }
+  if (wakeReason & TTN_WAKE_BTN_PRESS) {
+    debugSerial.print(F("Button_Press "));
+  }
+  if (wakeReason & TTN_WAKE_BTN_RELEASE) {
+    debugSerial.print(F("Button_release "));
+  }
+  if (wakeReason & TTN_WAKE_MOTION_START) {
+    debugSerial.print(F("Motion_Start "));
+  }
+  if (wakeReason & TTN_WAKE_MOTION_STOP)  {
+    debugSerial.print(F("Motion_Stop "));
+  }
+  if (wakeReason & TTN_WAKE_TEMPERATURE) {
+    debugSerial.print(F("Temperature "));
+  }
 }
 ```
 
@@ -81,11 +134,9 @@ void sleep() {
 }
 ```
 
-Pay attention, this internal sleep method of the library does not put the LoRa module (RN2483 or RN2903) into sleep mode and thus your node may consume 3mA even in sleep mode. You need to manually set the LoRa module to sleep and wake. 
-Check the example [BatteryMonitorLPP](../examples/BatteryMonitorLPP/)
-
 ## Interval
 Instead of using your `loop()` function, use `configInterval()` and `onInterval()` to set a function to be called on a certain interval:
+
 
 ```c
 void setup() {
@@ -97,31 +148,37 @@ void setup() {
     node->onInterval(interval);
 }
 
-void interval() {
+void interval(uint8_t wakeReason) {
     node->showStatus();
 }
 ```
+See [`onWake()`](#method-onwake) for definition of wakeReason: 
+
 
 ### Method: onInterval
 Set a callback that will run on a certain interval. This will automatically enable the interval.
 
 ```c
-void onInterval(void(*callback)(void));
+void onInterval(void(*callback)(uint8_t wakeReason));
 ```
 
-- `void(*callback)(void)`: Function to be called, with no arguments nor return value.
+- `void(*callback)(uint8_t wakeReason)`: Function to be called.
+
+See [`onWake()`](#method-onwake) for definition of wakeReason: 
 
 ### Method: configInterval
 
 ```c
 void configInterval(bool enabled, uint32_t ms);
 void configInterval(bool enabled);
+void configInterval(TheThingsNetwork *pttn, uint32_t ms);
 ```
 
 - `bool enabled`: Enable or disable the interval callback. Enabled automatically by `onInterval()`, but you can use this method to temporarily disable it. Defaults to `false`.
+- `TheThingsNetwork * pttn`: This enable the interval callback but in this mode, the interval is passed to RN2483 or RN2903 module (this is why we need to pass pointer to object) with the command `sys sleep ms` and then it's the LoRa module that wake up the node. This is the most advanced Low Power Mode. In this mode, the watchdog is disabled and consumption again reduced.
 - `uint32_t ms`: Minimal time between calling the interval callback. Defaults to `60000` or 60 seconds.
 
-> If the Node has no USB data connection or is configured to also sleep in that case, it will only wake up every 8 seconds to check if the interval callback should run. This means setting `ms` to less than `8000` makes no sense. It also means that the maximum time between calls can be up to 8 seconds longer than `ms` if it wakes up to handle button or sensor interaction in between.
+> If the Node has no USB data connection or is configured to also sleep in that case, it will only wake up every 8 seconds to check if the interval callback should run. This means setting `ms` to less than `8000` makes no sense. It also means that the maximum time between calls can be up to 8 seconds longer than `ms` if it wakes up to handle button or sensor interaction in between. This does not apply when wake up by LoRa module.
 
 ## Method: showStatus
 Writes information about the device and sensors to `Serial`.
@@ -196,7 +253,7 @@ void configTemperature(bool enabled, MCP9804_Resolution resolution);
 void configTemperature(bool enabled);
 ```
 
-- `bool enabled `: Enable or disable the temperature sensor. Enabled automatically by `onTemperature()`, but you can use this method to temporarily disable the sensor and therefore the alerts. Defaults to `false`.
+- `bool enabled `: Enable or disable the temperature sensor ALERTS. Enabled automatically by `onTemperature()`, but you can use this method to temporarily disable the alerts. Defaults to `false`.
 - `MCP9804_Resolution resolution = R_DEGREES_0_0625 `: Set the resolution (precision) of the sensor. One of:
     - `R_DEGREES_0_5000`: +0.5 C
     - `R_DEGREES_0_2500`: +0.25 C
@@ -457,9 +514,29 @@ When disabled, the [`loop()`](#method-loop) method will delay 100ms until an int
 
 > When the Node goes into sleep, the Serial Monitor will loose its connection. The Node will try to reopen the connection when it wakes up, but Serial Monitor might not always be able to pick it up.
 
-## Method: getBattery
-Returns the battery level in millivolt (mV) as a unsigned integer of 2 bytes.
+## Battery
+Different methods to get battery level
+
+### Method: getBattery
+Returns the battery level in millivolt (mV) as a unsigned integer of 2 bytes. This method measure battery with a resistor voltage divider (located before 3.3V ob board regulator.) and connected to an analog input pin. The ADC pin as voltage reference of 2.52V
 
 ```c
 uint16_t getBattery();
 ```
+
+### Method: getVCC
+Returns the AT32U4 chip measured VCC voltage millivolt (mV) using the 1.1V internal Analog Reference voltage. This method is prefered when voltage before regulator comes to and below 3.3V. Moreover, if voltage is below 2.52V, using the method `getBattery` could return wrong values due to the main voltage < ADC reference voltage.
+
+```c
+uint16_t getVCC();
+```
+
+### Alternative Method: getVDD
+You can also use the getVDD from [TTN Device Library](https://github.com/TheThingsNetwork/arduino-device-lib).
+
+Returns the voltage in millivolt (mV) measured by the RN2xxx LoRa module. It's for information only since we don't know how it's measured.
+
+```c
+uint16_t bat = ttn.getVDD();
+```
+
