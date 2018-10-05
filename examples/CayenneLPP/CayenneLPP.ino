@@ -97,8 +97,6 @@ void onButtonRelease(unsigned long duration)
 
 void sendData(uint8_t port)
 {
-
-  // Wake RN2483
   ttn.wake();
 
   printSensors();
@@ -119,6 +117,7 @@ void sendData(uint8_t port)
 
   // Set RN module to sleep mode
   ttn.sleep(60000);
+  delay(50);
 }
 
 void printSensors()
