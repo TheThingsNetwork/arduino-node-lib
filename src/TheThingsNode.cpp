@@ -164,11 +164,11 @@ void TheThingsNode::loop()
     if (!this->motionStarted)
     {
       this->motionStartedAt = millis();
+      this->motionStarted = true;
       if (this->motionEnabled && this->motionStartCallback)
       {
         this->motionStartCallback();
       }
-      this->motionStarted = true;
     }
     TTN_MOTION_START = false;
   }
@@ -177,11 +177,11 @@ void TheThingsNode::loop()
   {
     if (this->motionStarted)
     {
+      this->motionStarted = false;
       if (this->motionEnabled && this->motionStopCallback)
       {
         this->motionStopCallback(millis() - this->motionStartedAt);
       }
-      this->motionStarted = false;
     }
     TTN_MOTION_STOP = false;
   }
