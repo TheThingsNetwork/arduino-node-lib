@@ -255,10 +255,10 @@ void onMotionStop(void(*callback)(unsigned long duration));
     - `unsigned long duration`: Time since the motion began, in ms.
 
 ### Method: isMoving
-Returns `true` if the device is currently moving. Requires the sensor to be enabled via `onMotionStart()`, `onMotionStop()` or `setMotion()`.
+Returns `true` if the device is currently moving. Requires the sensor to be enabled via `onMotionStart()`, `onMotionStop()` or `configMotion()`.
 
 ### Method: getAcceleration
-Returns the acceleration measured by the motion sensor in [units of g-force](https://en.wikipedia.org/wiki/G-force). Each of the values x, y and z falls in the range -2g to +2g. This function is useful to determine the orientation of the sensor relative to the earth, as gravity causes a 1g acceleration towards the centre of the earth. Requires the sensor to be enabled via `onMotionStart()`, `onMotionStop()` or `setMotion()`.
+Returns the acceleration measured by the motion sensor in [units of g-force](https://en.wikipedia.org/wiki/G-force). Each of the values x, y and z falls in the range -2g to +2g. This function is useful to determine the orientation of the sensor relative to the earth, as gravity causes a 1g acceleration towards the centre of the earth. Requires the sensor to be enabled via `onMotionStart()`, `onMotionStop()` or `configMotion()`.
 
 ```c
 void getAcceleration(float *x, float *y, float *z);
